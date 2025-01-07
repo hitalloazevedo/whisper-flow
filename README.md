@@ -35,6 +35,13 @@ abrindo o diretório
 
 Configurando 
 
+- Preparando o ambiente de trabalho do python
+```bash
+  python3 -m venv venv
+```
+```bash
+  source venv/bin/activate
+```
 - dentro do diretório `audio-text-converter`, criar uma pasta chamada `audios` os arquivos que serão convertidos, devem ser movidos para dentro desse diretório!
 
 Instalando requisitos
