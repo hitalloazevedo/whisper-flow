@@ -1,70 +1,83 @@
 
-# Conversor de aúdio/vídeo para texto
+# Audio to text transcriber
 
-Conversor construído em python utilizando a biblioteca whisper, disponibilizada pela openAI.
+Transcriber created in Python with the WhisperAI library.
 
-Esta versão do meu projeto, esta utilizando o modelo `small` que trabalha com 244 Milhões de parâmetros.
+This project is using the `small` model, which uses 244 million parameters.
 
-Este conversor é capaz de extrair o texto (transcrição) dos seguintes formatos de arquivos: `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `wav`, `webm`.
+The transcriber can handle the following audio extensions: `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `wav`, `webm`.
 
+## How to run
 
+### Requirements (Installing ffmpeg with chocolatey) (Windows)
+- [Python](https://www.python.org/) version >= 3.10
+- Install [chocolatey](https://docs.chocolatey.org/en-us/choco/setup)
+- Run `choco install ffmpeg`
+- Run `setx /m PATH "<ffmpeg path>"` In my case, the path was                             `C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin`)
 
-
-
-
-
-## Utilizando localmente
-
-### Requisitos (Instalando ffmpeg com chocolatey)
-- [Python](https://www.python.org/) versão >= 3
-- Instalar [chocolatey](https://docs.chocolatey.org/en-us/choco/setup)
-- Executar o comando `choco install ffmpeg`
-- Executar o comando `setx /m PATH "<Caminho do ffmpeg >"` No meu caso, instalando com o chocolatey o caminho foi                             `C:\ProgramData\chocolatey\lib\ffmpeg\tools\ffmpeg\bin`)
-
-Clonando o projeto
+Cloning the project
 
 ```bash
-  git clone https://github.com/hitalloazevedo/audio-text-converter
+  git clone https://github.com/hitalloazevedo/whisper-flow
 ```
 
-abrindo o diretório 
-
+Opening the directory
 ```bash
-  cd audio-text-converter
+  cd whisper-flow
 ```
 
-Configurando 
+Setting up python environment
+##### Windows
+```bash
+  python -m venv venv
+```
+Cmd
+```cmd
+  .\venv\Scripts\activate.bat
+```
 
-- Preparando o ambiente de trabalho do python
+Powershell
+```cmd
+  .\venv\Scripts\Activate.ps1
+```
+
+##### Linux
 ```bash
   python3 -m venv venv
 ```
 ```bash
   source venv/bin/activate
 ```
-- dentro do diretório `audio-text-converter`, criar uma pasta chamada `audios` os arquivos que serão convertidos, devem ser movidos para dentro desse diretório!
 
-Instalando requisitos
+
+
+- To transcribe the audios, the files must be in the `/audios` folder.
+
+Installing the requirements
 ```bash
   pip install -r requirements.txt
 ```
 
-Executando
-
+Running
+##### Windows
 ```bash
   python transcriber.py
 ```
+##### Linux
+```bash
+  python3 transcriber.py
+```
 
-Resultado
- - Após a transcrição, seu texto pode ser conferido em `/output/<nome_do_arquivo.txt>`
+Checking results
+ - After running `Whisper Flow`, you can find your transcrip in the `/output/<filename.txt>` folder.
 
 
 
 
 
-## Tecnologias
+## Techstack
 
-- Python
+- Python3
 - Whisper AI
 
 
