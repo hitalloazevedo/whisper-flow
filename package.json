@@ -2,6 +2,9 @@
   "name": "whisper-flow",
   "private": true,
   "packageManager": "pnpm@12.4.1",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "prepare": "husky",
     "dev": "turbo dev",
