@@ -1,2 +1,8 @@
 /venv
 /__pycache__
+node_modules/
+dist/
+.turbo/
+.env
+.env.*
+!.env.example
