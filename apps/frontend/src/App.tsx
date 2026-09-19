@@ -8,6 +8,7 @@ import {
   Plus,
   ShieldCheck,
   UploadCloud,
+  X,
 } from 'lucide-react'
 
 type Job = {
@@ -70,7 +71,11 @@ function App() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const [isSignedIn, setIsSignedIn] = useState(false)
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const accountMenuRef = useRef<HTMLDivElement>(null)
+  const uploadModalRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/health')
@@ -102,17 +107,45 @@ function App() {
     }
   }, [isAccountMenuOpen])
 
-  function addDemoJob() {
+  useEffect(() => {
+    if (!isUploadModalOpen) return
+
+    function closeModal(event: MouseEvent) {
+      if (uploadModalRef.current && !uploadModalRef.current.contains(event.target as Node)) {
+        setIsUploadModalOpen(false)
+      }
+    }
+
+    function closeModalWithEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsUploadModalOpen(false)
+    }
+
+    document.addEventListener('mousedown', closeModal)
+    document.addEventListener('keydown', closeModalWithEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeModal)
+      document.removeEventListener('keydown', closeModalWithEscape)
+    }
+  }, [isUploadModalOpen])
+
+  function addDemoJob(filename = 'new-recording.webm') {
     setJobs((currentJobs) => [
       {
         id: `job-${Date.now()}`,
-        filename: 'new-recording.webm',
+        filename,
         status: 'processing',
         duration: '—',
         createdAt: 'Just now',
       },
       ...currentJobs,
     ])
+    setSelectedFile(null)
+    setIsUploadModalOpen(false)
+  }
+
+  function openUploadModal() {
+    setSelectedFile(null)
+    setIsUploadModalOpen(true)
   }
 
   return (
@@ -225,7 +258,7 @@ function App() {
                 </div>
                 <UploadCloud size={22} strokeWidth={1.5} />
               </div>
-              <button className="dropzone" onClick={addDemoJob}>
+              <button className="dropzone" onClick={openUploadModal}>
                 <span className="upload-icon">
                   <Plus size={22} />
                 </span>
@@ -290,6 +323,66 @@ function App() {
             <span>Whisper Flow</span>
             <span>Built for focused listening.</span>
           </footer>
+
+          {isUploadModalOpen && (
+            <div className="modal-backdrop">
+              <div
+                ref={uploadModalRef}
+                className="upload-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="upload-modal-title"
+              >
+                <div className="modal-header">
+                  <div>
+                    <p className="section-kicker">New transcription</p>
+                    <h2 id="upload-modal-title">Choose your recording</h2>
+                  </div>
+                  <button
+                    className="modal-close"
+                    aria-label="Close upload dialog"
+                    onClick={() => setIsUploadModalOpen(false)}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <p className="modal-description">
+                  Select an audio file to add it to your transcription queue.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  className="file-input"
+                  type="file"
+                  accept="audio/*,video/mp4,video/webm"
+                  onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                />
+                <button className="modal-file-picker" onClick={() => fileInputRef.current?.click()}>
+                  <span className="modal-upload-icon">
+                    <UploadCloud size={20} />
+                  </span>
+                  <span>
+                    <strong>{selectedFile ? selectedFile.name : 'Select an audio file'}</strong>
+                    <small>
+                      {selectedFile ? 'Ready to transcribe' : 'MP3, WAV, M4A, MP4 or WEBM'}
+                    </small>
+                  </span>
+                  <span className="picker-arrow">↗</span>
+                </button>
+                <div className="modal-actions">
+                  <button className="modal-cancel" onClick={() => setIsUploadModalOpen(false)}>
+                    Cancel
+                  </button>
+                  <button
+                    className="modal-submit"
+                    disabled={!selectedFile}
+                    onClick={() => selectedFile && addDemoJob(selectedFile.name)}
+                  >
+                    Start transcription
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </main>
