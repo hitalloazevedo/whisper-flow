@@ -1,0 +1,9 @@
+node_modules
+dist
+.turbo
+venv
+__pycache__
+pnpm-lock.yaml
+*.md
+*.feature
+*.py
