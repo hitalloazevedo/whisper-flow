@@ -126,6 +126,7 @@ jobs:
 
             $COMPOSE up -d --remove-orphans backend worker frontend
             podman image prune -f
+            podman container prune -f
         env:
           GHCR_ACTOR: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
