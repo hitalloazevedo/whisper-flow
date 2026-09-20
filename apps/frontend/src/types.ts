@@ -12,3 +12,11 @@ export type UploadLimits = {
   maxBytes: number
   acceptedExtensions: string[]
 }
+
+export type AuthUser = {
+  provider: 'google'
+  providerId: string
+  email: string
+  displayName: string
+  avatarUrl?: string
+}

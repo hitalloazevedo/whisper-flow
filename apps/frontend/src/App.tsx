@@ -6,13 +6,16 @@ import { Dashboard } from './components/Dashboard'
 import { apiUrl } from './config/api'
 import { initialJobs } from './data/demoJobs'
 import { getUploadLimits, mockedUploadLimits } from './features/upload/uploadLimits'
-import type { Job } from './types'
+import type { AuthUser, Job } from './types'
 
 function App() {
   const [jobs, setJobs] = useState<Job[]>(initialJobs)
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking')
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const [isSignedIn, setIsSignedIn] = useState(false)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [logoutError, setLogoutError] = useState<string | null>(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [uploadLimits, setUploadLimits] = useState(mockedUploadLimits)
 
@@ -35,11 +38,31 @@ function App() {
   useEffect(() => {
     const controller = new AbortController()
 
+    fetch(apiUrl('/api/v1/auth/me'), { credentials: 'include', signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error('Session unavailable')
+        return response.json() as Promise<{ user: AuthUser | null }>
+      })
+      .then(({ user: currentUser }) => {
+        setUser(currentUser)
+        setIsSignedIn(Boolean(currentUser))
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        setIsSignedIn(false)
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
     getUploadLimits(controller.signal)
       .then(setUploadLimits)
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return
-        // TODO: Remove the fallback when the backend exposes GET /api/upload-limits.
+        // Keep the local fallback when the API is unavailable during development.
         setUploadLimits(mockedUploadLimits)
       })
 
@@ -60,9 +83,23 @@ function App() {
     setIsUploadModalOpen(false)
   }
 
-  function signOut() {
-    setIsAccountMenuOpen(false)
-    setIsSignedIn(false)
+  async function signOut() {
+    setIsSigningOut(true)
+    setLogoutError(null)
+    try {
+      const response = await fetch(apiUrl('/api/v1/auth/logout'), {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!response.ok) throw new Error('Sign out failed')
+      setIsAccountMenuOpen(false)
+      setUser(null)
+      setIsSignedIn(false)
+    } catch {
+      setLogoutError('Unable to sign out. Please try again.')
+    } finally {
+      setIsSigningOut(false)
+    }
   }
 
   return (
@@ -74,7 +111,7 @@ function App() {
           </span>
           <span>whisper flow</span>
         </a>
-        {isSignedIn && (
+        {isSignedIn && user && (
           <div className="account-area">
             <span className={`api-indicator ${apiStatus}`}>
               <span className="indicator-dot" />
@@ -85,10 +122,13 @@ function App() {
                   : 'API offline'}
             </span>
             <AccountMenu
+              user={user}
               open={isAccountMenuOpen}
               onToggle={() => setIsAccountMenuOpen((open) => !open)}
               onDismiss={() => setIsAccountMenuOpen(false)}
               onSignOut={signOut}
+              signingOut={isSigningOut}
+              error={logoutError}
             />
           </div>
         )}
@@ -104,7 +144,7 @@ function App() {
           onAddJob={addJob}
         />
       ) : (
-        <AuthPage onGoogleSignIn={() => setIsSignedIn(true)} />
+        <AuthPage onGoogleSignIn={() => window.location.assign(apiUrl('/api/v1/auth/google'))} />
       )}
     </main>
   )

@@ -4,27 +4,62 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 beforeEach(() => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/auth/me'))
+        return Promise.resolve({ ok: true, json: async () => ({ user: null }) })
+      if (url.includes('/upload-limits')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            maxBytes: 1024 * 1024,
+            acceptedExtensions: ['mp3', 'wav', 'm4a', 'mp4', 'webm'],
+          }),
+        })
+      }
+      return Promise.resolve({ ok: true })
+    }),
+  )
 })
 
 afterEach(() => cleanup())
 
 describe('frontend workspace flow', () => {
-  it('enters the workspace through Google sign-in', async () => {
-    const user = userEvent.setup()
+  it('shows the Google sign-in entry point', async () => {
     render(<App />)
 
-    await user.click(screen.getByRole('button', { name: 'Continue with Google' }))
-
-    expect(screen.getByText('Bring your audio here')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Open account menu' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Continue with Google' })).toBeInTheDocument()
   })
 
   it('dismisses the account menu without signing out', async () => {
     const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/auth/me'))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            user: {
+              provider: 'google',
+              providerId: 'google-1',
+              email: 'user@example.com',
+              displayName: 'Test User',
+              avatarUrl: 'https://example.com/avatar.jpg',
+            },
+          }),
+        } as Response)
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          maxBytes: 1024 * 1024,
+          acceptedExtensions: ['mp3', 'wav', 'm4a', 'mp4', 'webm'],
+        }),
+      } as Response)
+    })
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Continue with Google' }))
-    await user.click(screen.getByRole('button', { name: 'Open account menu' }))
+    await user.click(await screen.findByRole('button', { name: 'Open account menu' }))
 
     expect(screen.getByRole('menu')).toBeInTheDocument()
     await user.click(document.body)
@@ -35,9 +70,9 @@ describe('frontend workspace flow', () => {
 
   it('validates and submits a selected recording from the upload modal', async () => {
     const user = userEvent.setup()
+    mockAuthenticatedSession()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Continue with Google' }))
-    await user.click(screen.getByRole('button', { name: /Choose an audio file/ }))
+    await user.click(await screen.findByRole('button', { name: /Choose an audio file/ }))
 
     const dialog = screen.getByRole('dialog')
     const input = dialog.querySelector('input[type="file"]') as HTMLInputElement
@@ -54,9 +89,9 @@ describe('frontend workspace flow', () => {
 
   it('rejects unsupported files', async () => {
     const user = userEvent.setup()
+    mockAuthenticatedSession()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Continue with Google' }))
-    await user.click(screen.getByRole('button', { name: /Choose an audio file/ }))
+    await user.click(await screen.findByRole('button', { name: /Choose an audio file/ }))
 
     const input = screen.getByRole('dialog').querySelector('input[type="file"]') as HTMLInputElement
     fireEvent.change(input, {
@@ -67,3 +102,31 @@ describe('frontend workspace flow', () => {
     expect(screen.getByRole('button', { name: 'Start transcription' })).toBeDisabled()
   })
 })
+
+function mockAuthenticatedSession() {
+  vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url.includes('/auth/me'))
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          user: {
+            provider: 'google',
+            providerId: 'google-1',
+            email: 'user@example.com',
+            displayName: 'Test User',
+            avatarUrl: 'https://example.com/avatar.jpg',
+          },
+        }),
+      } as Response)
+    if (url.includes('/upload-limits'))
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          maxBytes: 1024 * 1024,
+          acceptedExtensions: ['mp3', 'wav', 'm4a', 'mp4', 'webm'],
+        }),
+      } as Response)
+    return Promise.resolve({ ok: true } as Response)
+  })
+}
