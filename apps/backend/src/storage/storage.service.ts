@@ -19,18 +19,31 @@ const PRESIGNED_DOWNLOAD_URL_TTL_SECONDS = 5 * 60
 export class StorageService {
   private readonly logger = new Logger(StorageService.name)
   private readonly client: S3Client
+  private readonly presignClient: S3Client
   private readonly bucket: string
 
   constructor(@Inject(ConfigService) private readonly configService: ConfigService) {
     this.bucket = this.configService.getOrThrow<string>('S3_BUCKET')
-    this.client = new S3Client({
-      endpoint: this.configService.getOrThrow<string>('S3_ENDPOINT'),
-      region: this.configService.getOrThrow<string>('S3_REGION'),
-      forcePathStyle: this.configService.get<string>('S3_FORCE_PATH_STYLE') === 'true',
-      credentials: {
-        accessKeyId: this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.getOrThrow<string>('S3_SECRET_ACCESS_KEY'),
-      },
+    const endpoint = this.configService.getOrThrow<string>('S3_ENDPOINT')
+    const region = this.configService.getOrThrow<string>('S3_REGION')
+    const forcePathStyle = this.configService.get<string>('S3_FORCE_PATH_STYLE') === 'true'
+    const credentials = {
+      accessKeyId: this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID'),
+      secretAccessKey: this.configService.getOrThrow<string>('S3_SECRET_ACCESS_KEY'),
+    }
+
+    this.client = new S3Client({ endpoint, region, forcePathStyle, credentials })
+
+    // Presigned URLs are followed by the browser, not the backend, so they must be
+    // signed against an endpoint the browser can reach (e.g. localhost), which can
+    // differ from the endpoint the backend uses to reach the storage service
+    // internally (e.g. a Docker service name).
+    const publicEndpoint = this.configService.get<string>('S3_PUBLIC_ENDPOINT') ?? endpoint
+    this.presignClient = new S3Client({
+      endpoint: publicEndpoint,
+      region,
+      forcePathStyle,
+      credentials,
     })
   }
 
@@ -38,7 +51,7 @@ export class StorageService {
     this.logger.log('createPresignedUploadUrl -> ATTEMPTING', { key, contentType })
     try {
       const url = await getSignedUrl(
-        this.client,
+        this.presignClient,
         new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
         { expiresIn: PRESIGNED_UPLOAD_URL_TTL_SECONDS },
       )
@@ -57,7 +70,7 @@ export class StorageService {
     this.logger.log('createPresignedDownloadUrl -> ATTEMPTING', { key })
     try {
       const url = await getSignedUrl(
-        this.client,
+        this.presignClient,
         new GetObjectCommand({ Bucket: this.bucket, Key: key }),
         { expiresIn: PRESIGNED_DOWNLOAD_URL_TTL_SECONDS },
       )
