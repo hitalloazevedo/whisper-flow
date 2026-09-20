@@ -13,3 +13,4 @@ Index of ADRs. Records live in [docs/ADR/](ADR/).
 | [007](ADR/007-docker-compose-topology.md) | Docker Compose topology with migrations as a separate service |
 | [008](ADR/008-lower-upload-size-limit.md) | Lower the max upload size to 50MB |
 | [009](ADR/009-multi-worker-scaling.md) | Multi-worker scaling: heartbeat health, per-worker models, no orchestrator |
+| [010](ADR/010-github-actions-ghcr-deploy.md) | Manual GitHub Actions deploy: build to GHCR, pull on the VPS |

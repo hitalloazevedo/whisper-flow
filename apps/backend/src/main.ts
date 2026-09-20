@@ -22,7 +22,7 @@ async function bootstrap() {
   const PgSession = connectPgSimple(session)
   const sessionPool = new Pool({ connectionString: databaseUrl })
 
-  app.enableCors({ origin: frontendUrl, credentials: true })
+  app.enableCors({ origin: new URL(frontendUrl).origin, credentials: true })
   if (process.env.NODE_ENV === 'production') {
     app.getHttpAdapter().getInstance().set('trust proxy', 1)
   }

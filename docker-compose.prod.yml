@@ -1,0 +1,113 @@
+# Postgres is not managed here: the VPS runs a shared Postgres instance
+# (separate compose stack) reachable over the external `shared-db` network.
+# DATABASE_URL (pointing at that instance's whisper_flow DB/user) must be
+# set in .env — see .env.example.
+
+networks:
+  shared-db:
+    external: true
+
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:?S3_ACCESS_KEY_ID is required}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is required}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${S3_ACCESS_KEY_ID} $${S3_SECRET_ACCESS_KEY} &&
+      mc mb --ignore-existing local/${S3_BUCKET:-whisper-flow-audio} &&
+      (mc ilm rule rm --all --force local/${S3_BUCKET:-whisper-flow-audio} || true) &&
+      mc ilm rule add --expire-days 1 --prefix 'pending-uploads/' local/${S3_BUCKET:-whisper-flow-audio}
+      "
+    environment:
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+
+  backend-migrate:
+    image: ghcr.io/${GHCR_NAMESPACE}/whisper-flow-backend:${IMAGE_TAG:-latest}
+    networks:
+      - default
+      - shared-db
+    env_file:
+      - .env
+    command: ['node', 'dist/database/run-migrations.js']
+
+  backend:
+    image: ghcr.io/${GHCR_NAMESPACE}/whisper-flow-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks:
+      - default
+      - shared-db
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      backend-migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      PORT: '3000'
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: ${S3_BUCKET:-whisper-flow-audio}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: 'true'
+    ports:
+      # Loopback-only: the host nginx reverse-proxies to this, per docs/ADR/010.
+      - '127.0.0.1:${BACKEND_PORT:-3010}:3000'
+
+  frontend:
+    image: ghcr.io/${GHCR_NAMESPACE}/whisper-flow-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      # Loopback-only: the host nginx reverse-proxies to this, per docs/ADR/010.
+      - '127.0.0.1:${FRONTEND_PORT:-8081}:80'
+
+  worker:
+    image: ghcr.io/${GHCR_NAMESPACE}/whisper-flow-worker:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    networks:
+      - default
+      - shared-db
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: ${S3_BUCKET:-whisper-flow-audio}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: 'true'
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      POLL_INTERVAL_SECONDS: ${POLL_INTERVAL_SECONDS:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - whisper_model_cache:/root/.cache/huggingface
+
+volumes:
+  minio_data:
+  whisper_model_cache:

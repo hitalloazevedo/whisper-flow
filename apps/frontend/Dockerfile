@@ -11,7 +11,9 @@ FROM deps AS build
 COPY tsconfig.base.json ./
 COPY apps/frontend ./apps/frontend
 ARG VITE_API_URL=http://localhost:3000
+ARG VITE_BASE_PATH=/
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
 RUN pnpm --filter @whisper-flow/frontend run build
 
 FROM nginx:1.27-alpine AS runtime
