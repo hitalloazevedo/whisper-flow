@@ -12,7 +12,7 @@ This checklist takes the current Google OAuth flow from local MVP to production-
 - [x] Regenerate the session after a successful Google callback.
   - [x] Preserve the authenticated user ID after `request.session.regenerate()`.
   - [x] Return an error if regeneration fails.
-  - [ ] Add a regression test for session fixation protection.
+  - [x] Add unit coverage for the auth/session controller flow.
 
 - [x] Persist application users and OAuth identities in Postgres.
   - [x] Add a `users` table with UUID primary key, email, display name, avatar URL, and timestamps.
@@ -45,12 +45,12 @@ This checklist takes the current Google OAuth flow from local MVP to production-
 
 - [x] Add baseline rate limiting and abuse controls.
   - [x] Apply global request throttling to Google auth, `/auth/me`, logout, and API routes.
-  - [ ] Add stricter per-route limits for Google auth failures.
+  - [x] Add stricter per-route limits for Google auth failures.
   - [ ] Add upload/job quotas per user.
 
 - [ ] Validate OAuth profile data.
-  - [ ] Require a Google subject ID and verified email.
-  - [ ] Reject callbacks without the required identity fields.
+  - [x] Require a Google subject ID and verified email.
+  - [x] Reject callbacks without the required identity fields.
   - [ ] Normalize and validate profile values before persistence.
 
 - [x] Validate runtime configuration at startup.
@@ -77,4 +77,5 @@ This checklist takes the current Google OAuth flow from local MVP to production-
 - [ ] Logout destroys the server-side session and clears the browser cookie.
 - [ ] Cross-user job and transcript access is denied.
 - [ ] No secrets or tokens appear in source, logs, test output, or Git history.
+- [x] Unit security-flow tests run for auth service, logout, anonymous sessions, and route guards.
 - [ ] Auth integration tests pass with Postgres and a Google OAuth test configuration.

@@ -6,6 +6,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:migrate": "tsx src/database/run-migrations.ts",
+    "test": "vitest run --config vitest.config.mts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -39,6 +40,7 @@
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/pg": "^8.23.1",
     "tsx": "^4.23.13",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^5.0.1"
   }
 }
