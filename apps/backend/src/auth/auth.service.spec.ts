@@ -5,15 +5,18 @@ import { AuthService } from './auth.service'
 function createService() {
   const users = {
     findOne: vi.fn(),
-    create: vi.fn((value) => value),
+    upsert: vi.fn(),
     save: vi.fn(async (value) => ({ id: 'user-1', ...value })),
   }
   const oauthAccounts = {
     findOne: vi.fn(),
-    create: vi.fn((value) => value),
-    save: vi.fn(async (value) => value),
+    upsert: vi.fn(),
   }
-  return { service: new AuthService(users as never, oauthAccounts as never), users, oauthAccounts }
+  const transactionManager = {
+    getRepository: vi.fn((entity) => (entity.name === 'User' ? users : oauthAccounts)),
+  }
+  const dataSource = { transaction: vi.fn(async (callback) => callback(transactionManager)) }
+  return { service: new AuthService(dataSource as never), users, oauthAccounts }
 }
 
 const verifiedProfile = {
@@ -36,22 +39,41 @@ describe('AuthService', () => {
 
   it('creates a local user and OAuth link for a new Google identity', async () => {
     const { service, users, oauthAccounts } = createService()
-    users.findOne.mockResolvedValue(null)
+    users.findOne.mockResolvedValue({ id: 'user-1', email: 'user@example.com' })
     oauthAccounts.findOne.mockResolvedValue(null)
 
     const user = await service.findOrCreateGoogleUser(verifiedProfile)
 
     expect(user.id).toBe('user-1')
-    expect(users.create).toHaveBeenCalledWith({
-      email: verifiedProfile.email,
-      displayName: verifiedProfile.displayName,
-      avatarUrl: verifiedProfile.avatarUrl,
+    expect(users.upsert).toHaveBeenCalledWith(
+      {
+        email: verifiedProfile.email,
+        displayName: verifiedProfile.displayName,
+        avatarUrl: verifiedProfile.avatarUrl,
+      },
+      ['email'],
+    )
+    expect(oauthAccounts.upsert).toHaveBeenCalledWith(
+      { provider: 'google', providerSubject: verifiedProfile.providerId, userId: 'user-1' },
+      ['provider', 'providerSubject'],
+    )
+  })
+
+  it('normalizes email and display name before persistence', async () => {
+    const { service, users, oauthAccounts } = createService()
+    users.findOne.mockResolvedValue({ id: 'user-1', email: 'user@example.com' })
+    oauthAccounts.findOne.mockResolvedValue(null)
+
+    await service.findOrCreateGoogleUser({
+      ...verifiedProfile,
+      email: ' USER@EXAMPLE.COM ',
+      displayName: ' Test User ',
     })
-    expect(oauthAccounts.create).toHaveBeenCalledWith({
-      provider: 'google',
-      providerSubject: verifiedProfile.providerId,
-      userId: 'user-1',
-    })
+
+    expect(users.upsert).toHaveBeenCalledWith(
+      { email: 'user@example.com', displayName: 'Test User', avatarUrl: verifiedProfile.avatarUrl },
+      ['email'],
+    )
   })
 
   it('updates the existing linked user without creating another account', async () => {
@@ -75,6 +97,6 @@ describe('AuthService', () => {
       isActive: true,
     })
     expect(users.save).toHaveBeenCalledWith(existingUser)
-    expect(oauthAccounts.create).not.toHaveBeenCalled()
+    expect(oauthAccounts.upsert).not.toHaveBeenCalled()
   })
 })

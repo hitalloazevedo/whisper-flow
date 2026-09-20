@@ -5,8 +5,14 @@ ConfigModule.forRoot({ isGlobal: true })
 
 async function runMigrations() {
   await AppDataSource.initialize()
-  await AppDataSource.runMigrations()
-  await AppDataSource.destroy()
+  try {
+    await AppDataSource.runMigrations()
+  } finally {
+    await AppDataSource.destroy()
+  }
 }
 
-void runMigrations()
+void runMigrations().catch((error: unknown) => {
+  console.error('Database migrations failed', error)
+  process.exitCode = 1
+})

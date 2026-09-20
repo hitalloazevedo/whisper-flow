@@ -1,56 +1,62 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
-import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { InjectDataSource } from '@nestjs/typeorm'
+import { DataSource } from 'typeorm'
 import type { GoogleUser } from './auth.types'
 import { OAuthAccount } from './oauth-account.entity'
 import { User } from './user.entity'
 
 @Injectable()
 export class AuthService {
-  constructor(
-    @InjectRepository(User) private readonly users: Repository<User>,
-    @InjectRepository(OAuthAccount) private readonly oauthAccounts: Repository<OAuthAccount>,
-  ) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async findOrCreateGoogleUser(profile: GoogleUser) {
-    if (!profile.providerId || !profile.email || !profile.emailVerified) {
+    const normalizedEmail = profile.email.trim().toLowerCase()
+    const normalizedDisplayName = profile.displayName.trim()
+    if (
+      !profile.providerId ||
+      !normalizedEmail ||
+      !profile.emailVerified ||
+      !normalizedDisplayName
+    ) {
       throw new UnauthorizedException('Google account email is not verified')
     }
 
-    let account = await this.oauthAccounts.findOne({
-      where: { provider: profile.provider, providerSubject: profile.providerId },
-      relations: { user: true },
-    })
+    return this.dataSource.transaction(async (transactionManager) => {
+      const users = transactionManager.getRepository(User)
+      const oauthAccounts = transactionManager.getRepository(OAuthAccount)
+      const account = await oauthAccounts.findOne({
+        where: { provider: profile.provider, providerSubject: profile.providerId },
+        relations: { user: true },
+      })
 
-    if (account) {
-      account.user.email = profile.email
-      account.user.displayName = profile.displayName
-      account.user.avatarUrl = profile.avatarUrl ?? null
-      account.user.isActive = true
-      return this.users.save(account.user)
-    }
+      if (account) {
+        account.user.email = normalizedEmail
+        account.user.displayName = normalizedDisplayName
+        account.user.avatarUrl = profile.avatarUrl ?? null
+        account.user.isActive = true
+        return users.save(account.user)
+      }
 
-    let user = await this.users.findOne({ where: { email: profile.email } })
-    if (!user) {
-      user = await this.users.save(
-        this.users.create({
-          email: profile.email,
-          displayName: profile.displayName,
+      await users.upsert(
+        {
+          email: normalizedEmail,
+          displayName: normalizedDisplayName,
           avatarUrl: profile.avatarUrl ?? null,
-        }),
+        },
+        ['email'],
       )
-    }
+      const user = await users.findOne({ where: { email: normalizedEmail } })
+      if (!user) throw new Error('User upsert did not return a user')
 
-    account = this.oauthAccounts.create({
-      provider: profile.provider,
-      providerSubject: profile.providerId,
-      userId: user.id,
+      await oauthAccounts.upsert(
+        { provider: profile.provider, providerSubject: profile.providerId, userId: user.id },
+        ['provider', 'providerSubject'],
+      )
+      return user
     })
-    await this.oauthAccounts.save(account)
-    return user
   }
 
   async findActiveUser(userId: string) {
-    return this.users.findOne({ where: { id: userId, isActive: true } })
+    return this.dataSource.getRepository(User).findOne({ where: { id: userId, isActive: true } })
   }
 }

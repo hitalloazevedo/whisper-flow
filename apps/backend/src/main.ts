@@ -14,6 +14,7 @@ import { createAppLogger } from './logging/app-logger'
 async function bootstrap() {
   const logger = createAppLogger()
   const app = await NestFactory.create(AppModule, { logger })
+  app.enableShutdownHooks()
   const configService = app.get(ConfigService)
   const frontendUrl = configService.getOrThrow<string>('FRONTEND_URL')
   const databaseUrl = configService.getOrThrow<string>('DATABASE_URL')
@@ -29,13 +30,13 @@ async function bootstrap() {
     const startedAt = Date.now()
     response.on('finish', () => {
       logger.log(
-        JSON.stringify({
+        {
           event: 'http_request',
           method: request.method,
           path: request.path,
           statusCode: response.statusCode,
           durationMs: Date.now() - startedAt,
-        }),
+        },
         'HTTP',
       )
     })
@@ -62,6 +63,14 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3000)
   await app.listen(port)
   logger.log(`Whisper Flow API listening on http://localhost:${port}`, 'Bootstrap')
+
+  const shutdown = async (signal: string) => {
+    logger.log({ event: 'shutdown_started', signal }, 'Bootstrap')
+    await app.close()
+    await sessionPool.end()
+  }
+  process.once('SIGTERM', () => void shutdown('SIGTERM'))
+  process.once('SIGINT', () => void shutdown('SIGINT'))
 }
 
 void bootstrap()
