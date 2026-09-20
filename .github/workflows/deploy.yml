@@ -104,8 +104,27 @@ jobs:
             cd "$VPS_DEPLOY_PATH"
             echo "$GHCR_TOKEN" | podman login ghcr.io -u "$GHCR_ACTOR" --password-stdin
             export GHCR_NAMESPACE IMAGE_TAG
-            podman compose -f docker-compose.prod.yml pull
-            podman compose -f docker-compose.prod.yml up -d --remove-orphans
+            PROJECT_NAME=$(basename "$PWD")
+            COMPOSE="podman compose -f docker-compose.prod.yml"
+
+            $COMPOSE pull
+
+            # Staged manually instead of via `depends_on` — podman 4.9.3's
+            # `--requires` dependency-graph resolver unreliably fails to find
+            # already-running containers created by an earlier `podman run`
+            # call ("not found in input list"). See docker-compose.prod.yml.
+            $COMPOSE up -d minio
+            timeout 60 sh -c "until podman healthcheck run ${PROJECT_NAME}_minio_1; do sleep 2; done"
+
+            $COMPOSE up -d minio-init backend-migrate
+            INIT_EXIT=$(podman wait "${PROJECT_NAME}_minio-init_1")
+            MIGRATE_EXIT=$(podman wait "${PROJECT_NAME}_backend-migrate_1")
+            if [ "$INIT_EXIT" != "0" ] || [ "$MIGRATE_EXIT" != "0" ]; then
+              echo "minio-init or backend-migrate failed (exit $INIT_EXIT / $MIGRATE_EXIT)" >&2
+              exit 1
+            fi
+
+            $COMPOSE up -d --remove-orphans backend worker frontend
             podman image prune -f
         env:
           GHCR_ACTOR: ${{ github.actor }}

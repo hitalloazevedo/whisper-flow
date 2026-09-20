@@ -2,6 +2,13 @@
 # (separate compose stack) reachable over the external `shared-db` network.
 # DATABASE_URL (pointing at that instance's whisper_flow DB/user) must be
 # set in .env — see .env.example.
+#
+# No `depends_on` between services on purpose: podman-compose turns it into
+# `podman run --requires=...`, and podman 4.9.3's dependency-graph resolver
+# unreliably fails to find already-running containers referenced transitively
+# through it ("not found in input list"), breaking `up -d` on the VPS. Start
+# order is staged explicitly instead, in .github/workflows/deploy.yml's
+# deploy step — see docs/ADR/010.
 
 networks:
   default:
@@ -26,9 +33,6 @@ services:
 
   minio-init:
     image: quay.io/minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 $${S3_ACCESS_KEY_ID} $${S3_SECRET_ACCESS_KEY} &&
@@ -55,11 +59,6 @@ services:
     networks:
       - default
       - shared-db
-    depends_on:
-      minio-init:
-        condition: service_completed_successfully
-      backend-migrate:
-        condition: service_completed_successfully
     env_file:
       - .env
     environment:
@@ -77,8 +76,6 @@ services:
   frontend:
     image: ghcr.io/${GHCR_NAMESPACE}/whisper-flow-frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    depends_on:
-      - backend
     ports:
       # Loopback-only: the host nginx reverse-proxies to this, per docs/ADR/010.
       - '127.0.0.1:${FRONTEND_PORT:-8081}:80'
@@ -89,9 +86,6 @@ services:
     networks:
       - default
       - shared-db
-    depends_on:
-      minio-init:
-        condition: service_completed_successfully
     env_file:
       - .env
     environment:

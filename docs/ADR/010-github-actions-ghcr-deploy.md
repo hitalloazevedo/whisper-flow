@@ -25,10 +25,15 @@ each app running its own Postgres container.
   ADR 007's build-time baking.
 - The `deploy` job SSHes into the VPS (`appleboy/ssh-action`, using the
   `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY`/`VPS_PORT`/`VPS_DEPLOY_PATH` repo
-  secrets) and runs `podman compose -f docker-compose.prod.yml pull && up -d
-  --remove-orphans` in `VPS_DEPLOY_PATH` — the VPS runs Podman, not Docker.
-  It authenticates to GHCR with the job's own `GITHUB_TOKEN`, valid only for
-  the run's duration.
+  secrets), `podman login`s with the job's own `GITHUB_TOKEN` (valid only for
+  the run's duration), pulls, then brings services up in three explicit
+  stages — `minio`, then `minio-init`+`backend-migrate` (waiting for both to
+  exit 0), then `backend`/`worker`/`frontend` — instead of one
+  `up -d --remove-orphans`. `docker-compose.prod.yml` has no `depends_on`
+  between services; podman 4.9.3's `--requires` dependency-graph resolver
+  unreliably fails to find already-running containers referenced
+  transitively through it, so ordering is enforced by the deploy script
+  itself, not podman.
 - `docker-compose.prod.yml` mirrors the dev topology from ADR 007 but
   references `ghcr.io/${GHCR_NAMESPACE}/whisper-flow-*:${IMAGE_TAG}` images
   instead of `build:` blocks, drops the `postgres` service entirely, and
