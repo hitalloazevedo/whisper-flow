@@ -63,7 +63,7 @@ export class AuthController {
   logout(@Req() request: Request, @Res() response: Response) {
     const origin = request.get('origin')
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL')
-    if (origin !== frontendUrl) {
+    if (origin !== new URL(frontendUrl).origin) {
       return response.status(HttpStatus.FORBIDDEN).json({ message: 'Invalid request origin' })
     }
 

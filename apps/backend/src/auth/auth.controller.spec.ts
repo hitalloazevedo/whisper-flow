@@ -43,6 +43,20 @@ describe('AuthController security flows', () => {
     expect(response.json).toHaveBeenCalledWith({ message: 'Invalid request origin' })
   })
 
+  it('accepts logout requests whose origin matches a FRONTEND_URL with a path', () => {
+    const response = createResponse()
+    const request = createRequest('https://lab.hitalloazevedo.com')
+    const controller = new AuthController(
+      { getOrThrow: vi.fn(() => 'https://lab.hitalloazevedo.com/whisper-flow/') } as never,
+      {} as never,
+    )
+
+    controller.logout(request as never, response as never)
+
+    expect(request.session.destroy).toHaveBeenCalled()
+    expect(response.status).toHaveBeenCalledWith(204)
+  })
+
   it('destroys the session and clears the cookie for a trusted logout', () => {
     const response = createResponse()
     const request = createRequest()
