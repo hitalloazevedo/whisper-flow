@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard'
 import { apiUrl } from './config/api'
 import { initialJobs } from './data/demoJobs'
 import { useJobEvents } from './features/jobs/useJobEvents'
+import { deleteJob as deleteJobRequest } from './features/transcript/transcriptService'
 import { getUploadLimits, mockedUploadLimits } from './features/upload/uploadLimits'
 import {
   getPresignedUploadUrl,
@@ -28,6 +29,8 @@ function App() {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [jobsError, setJobsError] = useState<string | null>(null)
+  const [isDeletingJob, setIsDeletingJob] = useState(false)
+  const [deleteJobError, setDeleteJobError] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -133,6 +136,22 @@ function App() {
     }
   }
 
+  async function deleteJob(job: Job): Promise<boolean> {
+    setIsDeletingJob(true)
+    setDeleteJobError(null)
+
+    try {
+      await deleteJobRequest(job.id)
+      setJobs((currentJobs) => currentJobs.filter((current) => current.id !== job.id))
+      return true
+    } catch (error) {
+      setDeleteJobError(error instanceof Error ? error.message : 'Failed to delete transcript')
+      return false
+    } finally {
+      setIsDeletingJob(false)
+    }
+  }
+
   async function signOut() {
     setIsSigningOut(true)
     setLogoutError(null)
@@ -195,6 +214,9 @@ function App() {
           isUploading={isUploading}
           uploadError={uploadError}
           jobsError={jobsError}
+          onDeleteJob={deleteJob}
+          isDeletingJob={isDeletingJob}
+          deleteJobError={deleteJobError}
         />
       ) : (
         <AuthPage onGoogleSignIn={() => window.location.assign(apiUrl('/api/v1/auth/google'))} />

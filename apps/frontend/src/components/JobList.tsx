@@ -1,7 +1,11 @@
-import { CheckCircle2, Clock3, FileAudio, FileText } from 'lucide-react'
+import { CheckCircle2, Clock3, FileAudio, FileText, Trash2 } from 'lucide-react'
 import type { Job } from '../types'
 
-type JobListProps = { jobs: Job[]; onViewTranscript: (job: Job) => void }
+type JobListProps = {
+  jobs: Job[]
+  onViewTranscript: (job: Job) => void
+  onDeleteRequest: (job: Job) => void
+}
 
 function formatDate(date: string): string {
   const d = new Date(date)
@@ -19,7 +23,7 @@ function formatDate(date: string): string {
   return d.toLocaleDateString()
 }
 
-export function JobList({ jobs, onViewTranscript }: JobListProps) {
+export function JobList({ jobs, onViewTranscript, onDeleteRequest }: JobListProps) {
   if (!jobs || jobs.length === 0) {
     return <div className="job-list" />
   }
@@ -40,6 +44,13 @@ export function JobList({ jobs, onViewTranscript }: JobListProps) {
             {job.status}
           </span>
           <span className="job-duration">—</span>
+          <button
+            className="row-delete"
+            aria-label={`Delete ${job.originalFilename}`}
+            onClick={() => onDeleteRequest(job)}
+          >
+            <Trash2 size={16} />
+          </button>
           {job.status === 'completed' ? (
             <button
               className="row-menu"

@@ -424,10 +424,22 @@ body {
 .job-row {
   min-height: 74px;
   display: grid;
-  grid-template-columns: 42px 1fr 125px 60px 24px;
+  grid-template-columns: 42px 1fr 125px 60px 24px 24px;
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid #dcd5c9;
+}
+.row-delete,
+.row-menu {
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  border: 0;
+  color: #9a968c;
+  background: transparent;
+}
+.row-delete:hover {
+  color: #a34f3e;
 }
 .file-icon {
   display: grid;
@@ -469,13 +481,6 @@ body {
 }
 .job-status.processing {
   color: #b16b51;
-}
-.row-menu {
-  padding: 8px 0;
-  border: 0;
-  color: #9a968c;
-  background: transparent;
-  letter-spacing: 2px;
 }
 footer {
   display: flex;
@@ -654,6 +659,14 @@ footer {
   cursor: not-allowed;
   opacity: 0.4;
 }
+.modal-submit.danger {
+  border-color: #a34f3e;
+  background: #a34f3e;
+}
+.modal-submit.danger:hover:not(:disabled) {
+  border-color: #832f22;
+  background: #832f22;
+}
 .transcript-modal {
   width: min(100%, 640px);
 }
@@ -791,7 +804,7 @@ footer {
     margin-top: 42px;
   }
   .job-row {
-    grid-template-columns: 38px 1fr 24px;
+    grid-template-columns: 38px 1fr 24px 24px;
     gap: 8px;
   }
   .job-status,

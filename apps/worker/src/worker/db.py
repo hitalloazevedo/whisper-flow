@@ -7,6 +7,12 @@ import psycopg2.extras
 
 NEW_JOB_CHANNEL = "new_job"
 
+# Total attempts allowed before a job is permanently marked 'failed': the
+# original attempt plus 2 retries. Mirrored by MAX_JOB_ATTEMPTS in
+# apps/backend/src/jobs/retry-policy.ts — the two are not shared code, so
+# keep them in sync by hand if this changes.
+MAX_RETRIES = 3
+
 
 class JobRow(TypedDict):
     id: str
@@ -64,6 +70,7 @@ def claim_next_job(conn: psycopg2.extensions.connection) -> Optional[JobRow]:
             WHERE id = (
                 SELECT id FROM jobs
                 WHERE status = 'pending'::jobs_status_enum
+                  AND ("nextAttemptAt" IS NULL OR "nextAttemptAt" <= now())
                 ORDER BY "createdAt" ASC
                 FOR UPDATE SKIP LOCKED
                 LIMIT 1
@@ -91,15 +98,38 @@ def mark_completed(conn: psycopg2.extensions.connection, job_id: str, output_pat
 
 
 def mark_failed(conn: psycopg2.extensions.connection, job_id: str, error_message: str) -> None:
+    """Marks a job failed and schedules a retry, unless retries are exhausted.
+
+    Backoff is simply the new retry count in minutes (1min, then 2min, for
+    the two retries MAX_RETRIES=3 allows). Deliberately no backoff is used
+    when a job is instead reclaimed from a stale 'processing' state by the
+    backend's sweep (see JobsStaleSweepService) - the staleness window
+    already served as the cooldown there.
+    """
     with conn.cursor() as cur:
         cur.execute(
             """
+            WITH updated AS (
+                SELECT "retryCount" + 1 AS new_retry_count FROM jobs WHERE id = %(job_id)s
+            )
             UPDATE jobs
-            SET status = 'failed'::jobs_status_enum,
-                "errorMessage" = %s,
-                "retryCount" = "retryCount" + 1,
+            SET "retryCount" = updated.new_retry_count,
+                status = CASE WHEN updated.new_retry_count >= %(max_retries)s
+                              THEN 'failed'::jobs_status_enum
+                              ELSE 'pending'::jobs_status_enum
+                         END,
+                "errorMessage" = %(error_message)s,
+                "nextAttemptAt" = CASE WHEN updated.new_retry_count >= %(max_retries)s
+                                       THEN NULL
+                                       ELSE now() + (updated.new_retry_count || ' minutes')::interval
+                                  END,
                 "updatedAt" = now()
-            WHERE id = %s
+            FROM updated
+            WHERE jobs.id = %(job_id)s
             """,
-            (error_message[:2000], job_id),
+            {
+                "job_id": job_id,
+                "max_retries": MAX_RETRIES,
+                "error_message": error_message[:2000],
+            },
         )

@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Inject,
   MessageEvent,
   Param,
@@ -54,6 +56,12 @@ export class JobsController {
   @Get(':id/transcript-url')
   async getTranscriptUrl(@Param('id') id: string, @Req() request: Request) {
     return this.jobsService.getTranscriptDownloadUrl(request.session.userId!, id)
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async deleteJob(@Param('id') id: string, @Req() request: Request) {
+    await this.jobsService.deleteJob(request.session.userId!, id)
   }
 
   @Post('upload-url')

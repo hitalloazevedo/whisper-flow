@@ -28,3 +28,13 @@ export async function fetchTranscriptText(url: string): Promise<string> {
   }
   return response.text()
 }
+
+export async function deleteJob(jobId: string): Promise<void> {
+  const response = await apiFetch(`/api/v1/jobs/${jobId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response, 'Failed to delete transcript'))
+  }
+}

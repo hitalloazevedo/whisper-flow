@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
+import { ScheduleModule } from '@nestjs/schedule'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { HealthController } from './health.controller'
 import { UploadLimitsController } from './upload-limits.controller'
@@ -40,6 +41,7 @@ import { APP_GUARD } from '@nestjs/core'
       },
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    ScheduleModule.forRoot(),
     AuthModule,
     JobsModule,
     TypeOrmModule.forRootAsync({

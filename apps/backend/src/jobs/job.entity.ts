@@ -65,4 +65,10 @@ export class Job {
 
   @Column({ type: 'timestamptz', nullable: true })
   completedAt!: Date | null
+
+  @Column({ type: 'timestamptz', nullable: true })
+  deletedAt!: Date | null
+
+  @Column({ type: 'timestamptz', nullable: true })
+  nextAttemptAt!: Date | null
 }
