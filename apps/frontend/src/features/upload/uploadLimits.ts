@@ -1,13 +1,14 @@
 import type { UploadLimits } from '../../types'
+import { apiUrl } from '../../config/api'
 
-// Temporary local value until GET /api/upload-limits is available.
+// Temporary fallback for local development if GET /api/v1/upload-limits is unavailable.
 export const mockedUploadLimits: UploadLimits = {
   maxBytes: 2 * 1024 * 1024 * 1024,
   acceptedExtensions: ['mp3', 'wav', 'm4a', 'mp4', 'webm'],
 }
 
 export async function getUploadLimits(signal?: AbortSignal): Promise<UploadLimits> {
-  const response = await fetch('/api/upload-limits', { signal })
+  const response = await fetch(apiUrl('/api/v1/upload-limits'), { signal })
   if (!response.ok) throw new Error('Upload limits unavailable')
   return response.json() as Promise<UploadLimits>
 }

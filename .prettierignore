@@ -7,3 +7,15 @@ pnpm-lock.yaml
 *.md
 *.feature
 *.py
+.env.*
+!.env.example
+**/.env.example
+node_modules
+dist
+.turbo
+venv
+__pycache__
+pnpm-lock.yaml
+*.md
+*.feature
+*.py

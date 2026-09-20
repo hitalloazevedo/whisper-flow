@@ -3,6 +3,7 @@ import { AudioLines } from 'lucide-react'
 import { AccountMenu } from './components/AccountMenu'
 import { AuthPage } from './components/AuthPage'
 import { Dashboard } from './components/Dashboard'
+import { apiUrl } from './config/api'
 import { initialJobs } from './data/demoJobs'
 import { getUploadLimits, mockedUploadLimits } from './features/upload/uploadLimits'
 import type { Job } from './types'
@@ -18,7 +19,7 @@ function App() {
   useEffect(() => {
     const controller = new AbortController()
 
-    fetch('/api/health', { signal: controller.signal })
+    fetch(apiUrl('/api/v1/health'), { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error('API unavailable')
         setApiStatus('online')
