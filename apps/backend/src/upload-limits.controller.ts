@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common'
 
-const mockedUploadLimits = {
+export const uploadLimits = {
   maxBytes: 100 * 1024 * 1024,
   acceptedExtensions: ['mp3', 'wav', 'm4a', 'mp4', 'webm'],
 }
@@ -9,6 +9,6 @@ const mockedUploadLimits = {
 export class UploadLimitsController {
   @Get()
   getUploadLimits() {
-    return mockedUploadLimits
+    return uploadLimits
   }
 }

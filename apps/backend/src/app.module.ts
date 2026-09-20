@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { HealthController } from './health.controller'
-import { JobsController } from './jobs.controller'
 import { UploadLimitsController } from './upload-limits.controller'
 import { AuthModule } from './auth/auth.module'
+import { JobsModule } from './jobs/jobs.module'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
 
@@ -20,6 +20,11 @@ import { APP_GUARD } from '@nestjs/core'
           'GOOGLE_CLIENT_ID',
           'GOOGLE_CLIENT_SECRET',
           'GOOGLE_CALLBACK_URL',
+          'S3_ENDPOINT',
+          'S3_REGION',
+          'S3_BUCKET',
+          'S3_ACCESS_KEY_ID',
+          'S3_SECRET_ACCESS_KEY',
         ]
         const missing = required.filter((key) => !config[key])
         if (missing.length > 0)
@@ -36,6 +41,7 @@ import { APP_GUARD } from '@nestjs/core'
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     AuthModule,
+    JobsModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -47,7 +53,7 @@ import { APP_GUARD } from '@nestjs/core'
       }),
     }),
   ],
-  controllers: [HealthController, JobsController, UploadLimitsController],
+  controllers: [HealthController, UploadLimitsController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}
