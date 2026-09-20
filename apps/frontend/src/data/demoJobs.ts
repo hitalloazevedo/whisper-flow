@@ -1,25 +1,44 @@
 import type { Job } from '../types'
 
+function isoOffsetMs(offsetMs: number): string {
+  return new Date(Date.now() - offsetMs).toISOString()
+}
+
 export const initialJobs: Job[] = [
   {
     id: 'job-1024',
-    filename: 'customer-interview.m4a',
     status: 'completed',
-    duration: '18:42',
-    createdAt: 'Today, 09:24',
+    inputPath: 'uploads/user-1/customer-interview.m4a',
+    originalFilename: 'customer-interview.m4a',
+    outputPath: null,
+    errorMessage: null,
+    createdAt: isoOffsetMs(3600000),
+    updatedAt: isoOffsetMs(3600000),
+    startedAt: isoOffsetMs(3600000),
+    completedAt: isoOffsetMs(1800000),
   },
   {
     id: 'job-1023',
-    filename: 'product-notes.wav',
     status: 'completed',
-    duration: '07:16',
-    createdAt: 'Yesterday, 16:08',
+    inputPath: 'uploads/user-1/product-notes.wav',
+    originalFilename: 'product-notes.wav',
+    outputPath: null,
+    errorMessage: null,
+    createdAt: isoOffsetMs(86400000),
+    updatedAt: isoOffsetMs(86400000),
+    startedAt: isoOffsetMs(86400000),
+    completedAt: isoOffsetMs(82800000),
   },
   {
     id: 'job-1022',
-    filename: 'research-call.mp3',
     status: 'processing',
-    duration: '12:03',
-    createdAt: 'Yesterday, 15:41',
+    inputPath: 'uploads/user-1/research-call.mp3',
+    originalFilename: 'research-call.mp3',
+    outputPath: null,
+    errorMessage: null,
+    createdAt: isoOffsetMs(86400000),
+    updatedAt: isoOffsetMs(600000),
+    startedAt: isoOffsetMs(600000),
+    completedAt: null,
   },
 ]

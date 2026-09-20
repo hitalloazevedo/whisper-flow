@@ -1,11 +1,16 @@
-export type JobStatus = 'completed' | 'processing'
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 export type Job = {
   id: string
-  filename: string
   status: JobStatus
-  duration: string
+  inputPath: string
+  originalFilename: string
+  outputPath: string | null
+  errorMessage: string | null
   createdAt: string
+  updatedAt: string
+  startedAt: string | null
+  completedAt: string | null
 }
 
 export type UploadLimits = {

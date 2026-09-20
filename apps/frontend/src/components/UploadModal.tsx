@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { UploadCloud, X } from 'lucide-react'
+import { Loader2, UploadCloud, X } from 'lucide-react'
 import { useDismissibleLayer } from '../hooks/useDismissibleLayer'
 import { formatUploadLimit, validateUpload } from '../features/upload/uploadLimits'
 import type { UploadLimits } from '../types'
@@ -7,10 +7,18 @@ import type { UploadLimits } from '../types'
 type UploadModalProps = {
   limits: UploadLimits
   onClose: () => void
-  onSubmit: (file: File) => void
+  onSubmit: (file: File) => Promise<void>
+  isUploading?: boolean
+  error?: string | null
 }
 
-export function UploadModal({ limits, onClose, onSubmit }: UploadModalProps) {
+export function UploadModal({
+  limits,
+  onClose,
+  onSubmit,
+  isUploading = false,
+  error = null,
+}: UploadModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -49,9 +57,14 @@ export function UploadModal({ limits, onClose, onSubmit }: UploadModalProps) {
 
   function selectFile(file: File | undefined) {
     if (!file) return
-    const error = validateUpload(file, limits)
-    setSelectedFile(error ? null : file)
-    setValidationError(error)
+    const validationErr = validateUpload(file, limits)
+    setSelectedFile(validationErr ? null : file)
+    setValidationError(validationErr)
+  }
+
+  async function handleSubmit() {
+    if (!selectedFile) return
+    await onSubmit(selectedFile)
   }
 
   return (
@@ -107,16 +120,22 @@ export function UploadModal({ limits, onClose, onSubmit }: UploadModalProps) {
             {validationError}
           </p>
         )}
+        {error && (
+          <p className="upload-error" role="alert">
+            {error}
+          </p>
+        )}
         <div className="modal-actions">
-          <button className="modal-cancel" onClick={onClose}>
+          <button className="modal-cancel" onClick={onClose} disabled={isUploading}>
             Cancel
           </button>
           <button
             className="modal-submit"
-            disabled={!selectedFile}
-            onClick={() => selectedFile && onSubmit(selectedFile)}
+            disabled={!selectedFile || isUploading}
+            onClick={handleSubmit}
           >
-            Start transcription
+            {isUploading && <Loader2 className="spin" size={14} aria-hidden="true" />}
+            {isUploading ? 'Uploading...' : 'Start transcription'}
           </button>
         </div>
       </div>

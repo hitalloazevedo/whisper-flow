@@ -20,6 +20,7 @@ interface CreateUploadUrlBody {
 
 interface CreateJobBody {
   key?: string
+  filename?: string
 }
 
 @Controller('api/v1/jobs')
@@ -50,9 +51,15 @@ export class JobsController {
   @Post()
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   async createJob(@Body() body: CreateJobBody, @Req() request: Request) {
-    if (!body.key) throw new BadRequestException('key is required')
+    if (!body.key || !body.filename) {
+      throw new BadRequestException('key and filename are required')
+    }
 
-    const job = await this.jobsService.createJobFromUpload(request.session.userId!, body.key)
+    const job = await this.jobsService.createJobFromUpload(
+      request.session.userId!,
+      body.key,
+      body.filename,
+    )
     return { job }
   }
 }

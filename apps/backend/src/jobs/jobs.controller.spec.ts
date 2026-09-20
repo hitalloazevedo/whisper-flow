@@ -55,9 +55,19 @@ describe('JobsController', () => {
       const jobsService = { createJobFromUpload: vi.fn() }
       const controller = new JobsController(jobsService as never)
 
-      await expect(controller.createJob({}, createRequest() as never)).rejects.toBeInstanceOf(
-        BadRequestException,
-      )
+      await expect(
+        controller.createJob({ filename: 'file.mp3' }, createRequest() as never),
+      ).rejects.toBeInstanceOf(BadRequestException)
+      expect(jobsService.createJobFromUpload).not.toHaveBeenCalled()
+    })
+
+    it('rejects a request missing the filename', async () => {
+      const jobsService = { createJobFromUpload: vi.fn() }
+      const controller = new JobsController(jobsService as never)
+
+      await expect(
+        controller.createJob({ key: 'pending-uploads/user-1/file.mp3' }, createRequest() as never),
+      ).rejects.toBeInstanceOf(BadRequestException)
       expect(jobsService.createJobFromUpload).not.toHaveBeenCalled()
     })
 
@@ -66,13 +76,14 @@ describe('JobsController', () => {
       const controller = new JobsController(jobsService as never)
 
       const result = await controller.createJob(
-        { key: 'pending-uploads/user-1/file.mp3' },
+        { key: 'pending-uploads/user-1/file.mp3', filename: 'file.mp3' },
         createRequest() as never,
       )
 
       expect(jobsService.createJobFromUpload).toHaveBeenCalledWith(
         'user-1',
         'pending-uploads/user-1/file.mp3',
+        'file.mp3',
       )
       expect(result).toEqual({ job: { id: 'job-1' } })
     })

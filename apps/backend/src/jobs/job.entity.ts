@@ -39,6 +39,9 @@ export class Job {
   @Column({ type: 'varchar' })
   inputPath!: string
 
+  @Column({ type: 'varchar' })
+  originalFilename!: string
+
   @Column({ type: 'varchar', nullable: true })
   outputPath!: string | null
 

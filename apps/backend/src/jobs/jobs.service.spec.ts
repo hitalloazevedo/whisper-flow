@@ -49,8 +49,16 @@ describe('JobsService', () => {
       const { service } = createService()
 
       await expect(
-        service.createJobFromUpload('user-1', 'pending-uploads/user-2/file.mp3'),
+        service.createJobFromUpload('user-1', 'pending-uploads/user-2/file.mp3', 'file.mp3'),
       ).rejects.toBeInstanceOf(ForbiddenException)
+    })
+
+    it('rejects a blank filename', async () => {
+      const { service } = createService()
+
+      await expect(
+        service.createJobFromUpload('user-1', 'pending-uploads/user-1/file.mp3', '   '),
+      ).rejects.toBeInstanceOf(BadRequestException)
     })
 
     it('propagates a not-found error when the object was never uploaded', async () => {
@@ -58,7 +66,7 @@ describe('JobsService', () => {
       storageService.getUploadedObjectSize.mockRejectedValue(new NotFoundException())
 
       await expect(
-        service.createJobFromUpload('user-1', 'pending-uploads/user-1/file.mp3'),
+        service.createJobFromUpload('user-1', 'pending-uploads/user-1/file.mp3', 'file.mp3'),
       ).rejects.toBeInstanceOf(NotFoundException)
     })
 
@@ -67,7 +75,7 @@ describe('JobsService', () => {
       storageService.getUploadedObjectSize.mockResolvedValue(200 * 1024 * 1024)
 
       await expect(
-        service.createJobFromUpload('user-1', 'pending-uploads/user-1/file.mp3'),
+        service.createJobFromUpload('user-1', 'pending-uploads/user-1/file.mp3', 'file.mp3'),
       ).rejects.toBeInstanceOf(BadRequestException)
       expect(storageService.commitUpload).not.toHaveBeenCalled()
     })
@@ -76,14 +84,22 @@ describe('JobsService', () => {
       const { service, jobs, storageService } = createService()
       storageService.getUploadedObjectSize.mockResolvedValue(1024)
 
-      const job = await service.createJobFromUpload('user-1', 'pending-uploads/user-1/file.mp3')
+      const job = await service.createJobFromUpload(
+        'user-1',
+        'pending-uploads/user-1/file.mp3',
+        '  recording.mp3  ',
+      )
 
       expect(storageService.commitUpload).toHaveBeenCalledWith(
         'pending-uploads/user-1/file.mp3',
         'uploads/user-1/file.mp3',
       )
       expect(jobs.save).toHaveBeenCalledWith(
-        expect.objectContaining({ createdBy: 'user-1', inputPath: 'uploads/user-1/file.mp3' }),
+        expect.objectContaining({
+          createdBy: 'user-1',
+          inputPath: 'uploads/user-1/file.mp3',
+          originalFilename: 'recording.mp3',
+        }),
       )
       expect(job.id).toBe('job-1')
     })

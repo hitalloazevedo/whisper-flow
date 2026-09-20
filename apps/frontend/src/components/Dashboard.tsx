@@ -10,7 +10,10 @@ type DashboardProps = {
   uploadOpen: boolean
   onOpenUpload: () => void
   onCloseUpload: () => void
-  onAddJob: (file: File) => void
+  onAddJob: (file: File) => Promise<void>
+  isUploading?: boolean
+  uploadError?: string | null
+  jobsError?: string | null
 }
 
 export function Dashboard({
@@ -20,6 +23,9 @@ export function Dashboard({
   onOpenUpload,
   onCloseUpload,
   onAddJob,
+  isUploading = false,
+  uploadError = null,
+  jobsError = null,
 }: DashboardProps) {
   return (
     <>
@@ -94,13 +100,26 @@ export function Dashboard({
             View all <span>↗</span>
           </button>
         </div>
+        {jobsError && (
+          <p className="upload-error" role="alert">
+            {jobsError}
+          </p>
+        )}
         <JobList jobs={jobs} />
       </section>
       <footer>
         <span>Whisper Flow</span>
         <span>Built for focused listening.</span>
       </footer>
-      {uploadOpen && <UploadModal limits={limits} onClose={onCloseUpload} onSubmit={onAddJob} />}
+      {uploadOpen && (
+        <UploadModal
+          limits={limits}
+          onClose={onCloseUpload}
+          onSubmit={onAddJob}
+          isUploading={isUploading}
+          error={uploadError}
+        />
+      )}
     </>
   )
 }

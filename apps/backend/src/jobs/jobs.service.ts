@@ -9,6 +9,7 @@ import { Job } from './job.entity'
 
 const PENDING_UPLOAD_PREFIX = 'pending-uploads'
 const UPLOAD_PREFIX = 'uploads'
+const MAX_FILENAME_LENGTH = 255
 
 function extensionOf(filename: string) {
   return extname(filename).slice(1).toLowerCase()
@@ -35,9 +36,14 @@ export class JobsService {
     return { uploadUrl: url, key, expiresInSeconds }
   }
 
-  async createJobFromUpload(userId: string, key: string) {
+  async createJobFromUpload(userId: string, key: string, originalFilename: string) {
     if (!key.startsWith(`${PENDING_UPLOAD_PREFIX}/${userId}/`)) {
       throw new ForbiddenException('Upload key does not belong to the current user')
+    }
+
+    const trimmedFilename = originalFilename.trim()
+    if (!trimmedFilename) {
+      throw new BadRequestException('filename is required')
     }
 
     const size = await this.storageService.getUploadedObjectSize(key)
@@ -48,7 +54,13 @@ export class JobsService {
     const finalKey = key.replace(PENDING_UPLOAD_PREFIX, UPLOAD_PREFIX)
     await this.storageService.commitUpload(key, finalKey)
 
-    return this.jobs.save(this.jobs.create({ createdBy: userId, inputPath: finalKey }))
+    return this.jobs.save(
+      this.jobs.create({
+        createdBy: userId,
+        inputPath: finalKey,
+        originalFilename: trimmedFilename.slice(0, MAX_FILENAME_LENGTH),
+      }),
+    )
   }
 
   async findJobsForUser(userId: string) {

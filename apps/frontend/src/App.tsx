@@ -6,6 +6,12 @@ import { Dashboard } from './components/Dashboard'
 import { apiUrl } from './config/api'
 import { initialJobs } from './data/demoJobs'
 import { getUploadLimits, mockedUploadLimits } from './features/upload/uploadLimits'
+import {
+  getPresignedUploadUrl,
+  uploadFileToS3,
+  createJobFromUpload,
+  fetchJobs,
+} from './features/upload/uploadService'
 import type { AuthUser, Job } from './types'
 
 function App() {
@@ -18,6 +24,9 @@ function App() {
   const [logoutError, setLogoutError] = useState<string | null>(null)
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
   const [uploadLimits, setUploadLimits] = useState(mockedUploadLimits)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [jobsError, setJobsError] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -69,18 +78,43 @@ function App() {
     return () => controller.abort()
   }, [])
 
-  function addJob(file: File) {
-    setJobs((currentJobs) => [
-      {
-        id: `job-${Date.now()}`,
-        filename: file.name,
-        status: 'processing',
-        duration: '—',
-        createdAt: 'Just now',
-      },
-      ...currentJobs,
-    ])
-    setIsUploadModalOpen(false)
+  useEffect(() => {
+    if (!isSignedIn) return
+
+    const controller = new AbortController()
+
+    fetchJobs(controller.signal)
+      .then((fetchedJobs) => {
+        setJobs(fetchedJobs)
+        setJobsError(null)
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        const message = error instanceof Error ? error.message : 'Failed to load transcriptions'
+        setJobsError(message)
+      })
+
+    return () => controller.abort()
+  }, [isSignedIn])
+
+  async function addJob(file: File) {
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      const contentType = file.type || 'application/octet-stream'
+      const { uploadUrl, key } = await getPresignedUploadUrl(file.name, contentType)
+      await uploadFileToS3(uploadUrl, file, contentType)
+      const newJob = await createJobFromUpload(key, file.name)
+
+      setJobs((currentJobs) => [newJob, ...currentJobs])
+      setIsUploadModalOpen(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed'
+      setUploadError(message)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   async function signOut() {
@@ -142,6 +176,9 @@ function App() {
           onOpenUpload={() => setIsUploadModalOpen(true)}
           onCloseUpload={() => setIsUploadModalOpen(false)}
           onAddJob={addJob}
+          isUploading={isUploading}
+          uploadError={uploadError}
+          jobsError={jobsError}
         />
       ) : (
         <AuthPage onGoogleSignIn={() => window.location.assign(apiUrl('/api/v1/auth/google'))} />
