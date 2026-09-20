@@ -114,16 +114,27 @@ jobs:
             # already-running containers created by an earlier `podman run`
             # call ("not found in input list"). See docker-compose.prod.yml.
             #
-            # --force-recreate on every stage: when service names are passed
-            # explicitly (as here), podman-compose's hash-based recreate
-            # check unreliably no-ops and falls back to `podman start` on
-            # whatever container already has that name — silently keeping
-            # the OLD image running instead of picking up the newly pulled
-            # one. Forcing recreation removes that fallback path.
-            $COMPOSE up -d --force-recreate minio
+            # minio isn't force-recreated: its image is always :latest with
+            # no per-deploy tag change, so there's nothing to pick up.
+            $COMPOSE up -d minio
             timeout 60 sh -c "until podman healthcheck run ${PROJECT_NAME}_minio_1; do sleep 2; done"
 
-            $COMPOSE up -d --force-recreate minio-init backend-migrate
+            # --force-recreate: when service names are passed explicitly (as
+            # here), podman-compose's hash-based recreate check unreliably
+            # no-ops and falls back to `podman start` on whatever container
+            # already has that name — silently keeping the OLD image running
+            # instead of picking up the newly pulled one.
+            #
+            # minio-init and backend-migrate are two separate single-service
+            # calls, not one `up -d minio-init backend-migrate`: podman-
+            # compose's service-scoping has a separate bug where `minio`
+            # isn't excluded from that specific two-service combination (it
+            # is correctly excluded from the single-service minio stage and
+            # the backend/worker/frontend stage) — with --force-recreate
+            # active, that stray inclusion tore minio down as collateral
+            # damage and it didn't come back.
+            $COMPOSE up -d --force-recreate minio-init
+            $COMPOSE up -d --force-recreate backend-migrate
             INIT_EXIT=$(podman wait "${PROJECT_NAME}_minio-init_1")
             MIGRATE_EXIT=$(podman wait "${PROJECT_NAME}_backend-migrate_1")
             if [ "$INIT_EXIT" != "0" ] || [ "$MIGRATE_EXIT" != "0" ]; then
@@ -132,6 +143,18 @@ jobs:
             fi
 
             $COMPOSE up -d --force-recreate --remove-orphans backend worker frontend
+
+            # Verify every expected container is actually running before
+            # cleaning up — pruning first would silently delete the evidence
+            # of a crash, as happened when minio died mid-deploy above.
+            for name in minio backend worker frontend; do
+              status=$(podman inspect "${PROJECT_NAME}_${name}_1" --format '{{.State.Status}}' 2>/dev/null || echo missing)
+              if [ "$status" != "running" ]; then
+                echo "${name} is not running (status: ${status})" >&2
+                exit 1
+              fi
+            done
+
             podman image prune -f
             podman container prune -f
         env:

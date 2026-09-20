@@ -26,18 +26,27 @@ each app running its own Postgres container.
 - The `deploy` job SSHes into the VPS (`appleboy/ssh-action`, using the
   `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY`/`VPS_PORT`/`VPS_DEPLOY_PATH` repo
   secrets), `podman login`s with the job's own `GITHUB_TOKEN` (valid only for
-  the run's duration), pulls, then brings services up in three explicit
-  stages — `minio`, then `minio-init`+`backend-migrate` (waiting for both to
-  exit 0), then `backend`/`worker`/`frontend` — instead of one
-  `up -d --remove-orphans`. `docker-compose.prod.yml` has no `depends_on`
-  between services; podman 4.9.3's `--requires` dependency-graph resolver
-  unreliably fails to find already-running containers referenced
-  transitively through it, so ordering is enforced by the deploy script
-  itself, not podman. Each stage's `up -d` also passes `--force-recreate`:
-  when service names are passed explicitly, podman-compose's hash-based
-  recreate check unreliably no-ops and falls back to `podman start` on
-  whatever container already holds that name, silently leaving the old
-  image running instead of the newly pulled one.
+  the run's duration), pulls, then brings services up in four explicit
+  single- or few-service `up -d` calls — `minio`; `minio-init`; then
+  `backend-migrate` (waiting for the latter two to exit 0); then
+  `backend`/`worker`/`frontend` — instead of one `up -d --remove-orphans`.
+  `docker-compose.prod.yml` has no `depends_on` between services; podman
+  4.9.3's `--requires` dependency-graph resolver unreliably fails to find
+  already-running containers referenced transitively through it, so
+  ordering is enforced by the deploy script itself, not podman.
+- `minio-init`/`backend-migrate`/`backend`/`worker`/`frontend` are brought
+  up with `--force-recreate` (`minio` is not — its image is always
+  `:latest`, nothing to pick up): when service names are passed explicitly,
+  podman-compose's hash-based recreate check unreliably no-ops and falls
+  back to `podman start` on whatever container already holds that name,
+  silently leaving the old image running instead of the newly pulled one.
+  `minio-init` and `backend-migrate` are two separate single-service calls
+  rather than one combined call — podman-compose's service-scoping has a
+  distinct bug where `minio` isn't excluded from that specific two-service
+  combination, and with `--force-recreate` active that stray inclusion
+  tore `minio` down as collateral damage. The script verifies every
+  container is actually `running` before pruning, so a future failure
+  leaves diagnosable state instead of the prune step silently deleting it.
 - `docker-compose.prod.yml` mirrors the dev topology from ADR 007 but
   references `ghcr.io/${GHCR_NAMESPACE}/whisper-flow-*:${IMAGE_TAG}` images
   instead of `build:` blocks, drops the `postgres` service entirely, and
