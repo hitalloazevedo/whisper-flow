@@ -113,10 +113,17 @@ jobs:
             # `--requires` dependency-graph resolver unreliably fails to find
             # already-running containers created by an earlier `podman run`
             # call ("not found in input list"). See docker-compose.prod.yml.
-            $COMPOSE up -d minio
+            #
+            # --force-recreate on every stage: when service names are passed
+            # explicitly (as here), podman-compose's hash-based recreate
+            # check unreliably no-ops and falls back to `podman start` on
+            # whatever container already has that name — silently keeping
+            # the OLD image running instead of picking up the newly pulled
+            # one. Forcing recreation removes that fallback path.
+            $COMPOSE up -d --force-recreate minio
             timeout 60 sh -c "until podman healthcheck run ${PROJECT_NAME}_minio_1; do sleep 2; done"
 
-            $COMPOSE up -d minio-init backend-migrate
+            $COMPOSE up -d --force-recreate minio-init backend-migrate
             INIT_EXIT=$(podman wait "${PROJECT_NAME}_minio-init_1")
             MIGRATE_EXIT=$(podman wait "${PROJECT_NAME}_backend-migrate_1")
             if [ "$INIT_EXIT" != "0" ] || [ "$MIGRATE_EXIT" != "0" ]; then
@@ -124,7 +131,7 @@ jobs:
               exit 1
             fi
 
-            $COMPOSE up -d --remove-orphans backend worker frontend
+            $COMPOSE up -d --force-recreate --remove-orphans backend worker frontend
             podman image prune -f
             podman container prune -f
         env:

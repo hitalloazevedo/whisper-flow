@@ -33,7 +33,11 @@ each app running its own Postgres container.
   between services; podman 4.9.3's `--requires` dependency-graph resolver
   unreliably fails to find already-running containers referenced
   transitively through it, so ordering is enforced by the deploy script
-  itself, not podman.
+  itself, not podman. Each stage's `up -d` also passes `--force-recreate`:
+  when service names are passed explicitly, podman-compose's hash-based
+  recreate check unreliably no-ops and falls back to `podman start` on
+  whatever container already holds that name, silently leaving the old
+  image running instead of the newly pulled one.
 - `docker-compose.prod.yml` mirrors the dev topology from ADR 007 but
   references `ghcr.io/${GHCR_NAMESPACE}/whisper-flow-*:${IMAGE_TAG}` images
   instead of `build:` blocks, drops the `postgres` service entirely, and
