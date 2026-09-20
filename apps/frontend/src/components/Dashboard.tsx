@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, ShieldCheck, UploadCloud } from 'lucide-react'
 import { formatUploadLimit } from '../features/upload/uploadLimits'
 import type { Job, UploadLimits } from '../types'
+import { DeleteConfirmModal } from './DeleteConfirmModal'
 import { JobList } from './JobList'
 import { TranscriptModal } from './TranscriptModal'
 import { UploadModal } from './UploadModal'
@@ -16,6 +17,9 @@ type DashboardProps = {
   isUploading?: boolean
   uploadError?: string | null
   jobsError?: string | null
+  onDeleteJob: (job: Job) => Promise<boolean>
+  isDeletingJob?: boolean
+  deleteJobError?: string | null
 }
 
 export function Dashboard({
@@ -28,8 +32,18 @@ export function Dashboard({
   isUploading = false,
   uploadError = null,
   jobsError = null,
+  onDeleteJob,
+  isDeletingJob = false,
+  deleteJobError = null,
 }: DashboardProps) {
   const [transcriptJob, setTranscriptJob] = useState<Job | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Job | null>(null)
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    const success = await onDeleteJob(deleteTarget)
+    if (success) setDeleteTarget(null)
+  }
 
   return (
     <>
@@ -109,7 +123,11 @@ export function Dashboard({
             {jobsError}
           </p>
         )}
-        <JobList jobs={jobs} onViewTranscript={setTranscriptJob} />
+        <JobList
+          jobs={jobs}
+          onViewTranscript={setTranscriptJob}
+          onDeleteRequest={setDeleteTarget}
+        />
       </section>
       <footer>
         <span>Whisper Flow</span>
@@ -126,6 +144,15 @@ export function Dashboard({
       )}
       {transcriptJob && (
         <TranscriptModal job={transcriptJob} onClose={() => setTranscriptJob(null)} />
+      )}
+      {deleteTarget && (
+        <DeleteConfirmModal
+          job={deleteTarget}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDelete}
+          isDeleting={isDeletingJob}
+          error={deleteJobError}
+        />
       )}
     </>
   )

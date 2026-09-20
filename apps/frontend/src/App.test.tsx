@@ -155,6 +155,75 @@ describe('frontend workspace flow', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Use one of these formats')
     expect(screen.getByRole('button', { name: 'Start transcription' })).toBeDisabled()
   })
+
+  it('deletes a transcript after confirming in the modal', async () => {
+    const user = userEvent.setup()
+    const existingJob = {
+      id: 'job-1',
+      status: 'completed',
+      inputPath: 'uploads/user-1/call.mp3',
+      originalFilename: 'call.mp3',
+      outputPath: 'transcripts/user-1/call.txt',
+      errorMessage: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      startedAt: null,
+      completedAt: null,
+    }
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+
+      if (url.includes('/auth/me')) return jsonResponse({ user: authenticatedUser })
+      if (url.includes('/upload-limits')) return jsonResponse(uploadLimitsResponse)
+      if (url.endsWith('/jobs/job-1') && method === 'DELETE') return jsonResponse({})
+      if (url.endsWith('/api/v1/jobs')) return jsonResponse({ jobs: [existingJob] })
+      return jsonResponse({})
+    })
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Delete call.mp3' }))
+    expect(screen.getByRole('dialog', { name: /Delete/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Delete transcript' }))
+
+    await waitFor(() => expect(screen.queryByText('call.mp3')).not.toBeInTheDocument())
+  })
+
+  it('keeps the transcript and shows an error when deletion fails', async () => {
+    const user = userEvent.setup()
+    const existingJob = {
+      id: 'job-1',
+      status: 'completed',
+      inputPath: 'uploads/user-1/call.mp3',
+      originalFilename: 'call.mp3',
+      outputPath: 'transcripts/user-1/call.txt',
+      errorMessage: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      startedAt: null,
+      completedAt: null,
+    }
+    vi.mocked(fetch).mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+
+      if (url.includes('/auth/me')) return jsonResponse({ user: authenticatedUser })
+      if (url.includes('/upload-limits')) return jsonResponse(uploadLimitsResponse)
+      if (url.endsWith('/jobs/job-1') && method === 'DELETE') {
+        return jsonResponse({ message: 'Job not found' }, false)
+      }
+      if (url.endsWith('/api/v1/jobs')) return jsonResponse({ jobs: [existingJob] })
+      return jsonResponse({})
+    })
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Delete call.mp3' }))
+    await user.click(screen.getByRole('button', { name: 'Delete transcript' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Job not found')
+    expect(screen.getByText('call.mp3')).toBeInTheDocument()
+  })
 })
 
 function mockAuthenticatedSession(options?: { jobCreatedResponse?: Promise<Response> }) {

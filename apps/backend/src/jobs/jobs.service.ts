@@ -8,7 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { Repository } from 'typeorm'
+import { IsNull, Repository } from 'typeorm'
 import { getCurrentTraceId } from '../logging/trace-context'
 import { StorageService } from '../storage/storage.service'
 import { uploadLimits } from '../upload-limits.controller'
@@ -72,11 +72,14 @@ export class JobsService {
   }
 
   async findJobsForUser(userId: string) {
-    return this.jobs.find({ where: { createdBy: userId }, order: { createdAt: 'DESC' } })
+    return this.jobs.find({
+      where: { createdBy: userId, deletedAt: IsNull() },
+      order: { createdAt: 'DESC' },
+    })
   }
 
   async getTranscriptDownloadUrl(userId: string, jobId: string) {
-    const job = await this.jobs.findOne({ where: { id: jobId } })
+    const job = await this.jobs.findOne({ where: { id: jobId, deletedAt: IsNull() } })
     if (!job || job.createdBy !== userId) {
       throw new NotFoundException('Job not found')
     }
@@ -85,5 +88,15 @@ export class JobsService {
     }
 
     return this.storageService.createPresignedDownloadUrl(job.outputPath)
+  }
+
+  async deleteJob(userId: string, jobId: string) {
+    const job = await this.jobs.findOne({ where: { id: jobId, deletedAt: IsNull() } })
+    if (!job || job.createdBy !== userId) {
+      throw new NotFoundException('Job not found')
+    }
+
+    job.deletedAt = new Date()
+    await this.jobs.save(job)
   }
 }

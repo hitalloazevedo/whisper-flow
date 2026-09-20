@@ -139,4 +139,15 @@ describe('JobsController', () => {
       expect(result).toEqual({ url: 'https://minio.local/signed', expiresInSeconds: 300 })
     })
   })
+
+  describe('deleteJob', () => {
+    it('deletes the job for the current user', async () => {
+      const jobsService = { deleteJob: vi.fn().mockResolvedValue(undefined) }
+      const controller = createController(jobsService)
+
+      await controller.deleteJob('job-1', createRequest() as never)
+
+      expect(jobsService.deleteJob).toHaveBeenCalledWith('user-1', 'job-1')
+    })
+  })
 })

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
+import { IsNull } from 'typeorm'
 import { JobsService } from './jobs.service'
 import { JobStatus } from './job.entity'
 
@@ -112,14 +113,14 @@ describe('JobsService', () => {
   })
 
   describe('findJobsForUser', () => {
-    it('lists jobs for a user ordered by most recent', async () => {
+    it('lists non-deleted jobs for a user ordered by most recent', async () => {
       const { service, jobs } = createService()
       jobs.find.mockResolvedValue([{ id: 'job-1' }])
 
       const result = await service.findJobsForUser('user-1')
 
       expect(jobs.find).toHaveBeenCalledWith({
-        where: { createdBy: 'user-1' },
+        where: { createdBy: 'user-1', deletedAt: IsNull() },
         order: { createdAt: 'DESC' },
       })
       expect(result).toEqual([{ id: 'job-1' }])
@@ -138,6 +139,9 @@ describe('JobsService', () => {
 
       const result = await service.getTranscriptDownloadUrl('user-1', 'job-1')
 
+      expect(jobs.findOne).toHaveBeenCalledWith({
+        where: { id: 'job-1', deletedAt: IsNull() },
+      })
       expect(storageService.createPresignedDownloadUrl).toHaveBeenCalledWith(
         'transcripts/user-1/job-1.txt',
       )
@@ -193,6 +197,39 @@ describe('JobsService', () => {
       await expect(service.getTranscriptDownloadUrl('user-1', 'job-1')).rejects.toBeInstanceOf(
         BadRequestException,
       )
+    })
+  })
+
+  describe('deleteJob', () => {
+    it('soft-deletes a job owned by the user', async () => {
+      const { service, jobs } = createService()
+      const job = { id: 'job-1', createdBy: 'user-1', deletedAt: null }
+      jobs.findOne.mockResolvedValue(job)
+
+      await service.deleteJob('user-1', 'job-1')
+
+      expect(jobs.findOne).toHaveBeenCalledWith({
+        where: { id: 'job-1', deletedAt: IsNull() },
+      })
+      expect(jobs.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'job-1', deletedAt: expect.any(Date) }),
+      )
+    })
+
+    it('throws NotFoundException when the job does not exist', async () => {
+      const { service, jobs } = createService()
+      jobs.findOne.mockResolvedValue(null)
+
+      await expect(service.deleteJob('user-1', 'job-1')).rejects.toBeInstanceOf(NotFoundException)
+      expect(jobs.save).not.toHaveBeenCalled()
+    })
+
+    it('throws NotFoundException when the job belongs to another user', async () => {
+      const { service, jobs } = createService()
+      jobs.findOne.mockResolvedValue({ id: 'job-1', createdBy: 'user-2', deletedAt: null })
+
+      await expect(service.deleteJob('user-1', 'job-1')).rejects.toBeInstanceOf(NotFoundException)
+      expect(jobs.save).not.toHaveBeenCalled()
     })
   })
 })
