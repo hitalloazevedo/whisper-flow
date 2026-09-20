@@ -50,10 +50,15 @@ each app running its own Postgres container.
   the shared instance (`CREATE DATABASE` / `CREATE USER`), once, outside
   this repo — `DATABASE_URL` in `.env` points at them.
 - `minio` also publishes a loopback-only port (`MINIO_PORT`, default 9000)
-  and gets an nginx location (`/whisper-flow-storage/`), because pre-signed
-  upload/download URLs are followed by the browser, not the backend — they
-  must be signed against `S3_PUBLIC_ENDPOINT` (that nginx path), not the
-  internal `S3_ENDPOINT=http://minio:9000` the backend uses to reach it.
+  and gets an nginx location matched on the bucket name (`/whisper-flow-audio/`,
+  i.e. `S3_BUCKET`), because pre-signed upload/download URLs are followed by
+  the browser, not the backend — they must be signed against
+  `S3_PUBLIC_ENDPOINT` (that nginx host), not the internal
+  `S3_ENDPOINT=http://minio:9000` the backend uses to reach it. Unlike the
+  frontend/backend locations, this one has no path prefix and no rewrite:
+  the SigV4 signature covers the exact path the SDK signed, and MinIO has
+  no notion of a base-path prefix to strip against, so nginx must forward
+  the request untouched.
 
 ## Consequences
 
