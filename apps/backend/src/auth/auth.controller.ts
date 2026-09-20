@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AuthGuard } from '@nestjs/passport'
+import { Throttle } from '@nestjs/throttler'
 import type { Request, Response } from 'express'
 import type { GoogleUser } from './auth.types'
 import { AuthService } from './auth.service'
@@ -25,12 +26,14 @@ export class AuthController {
   ) {}
 
   @Get('google')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UseGuards(AuthGuard('google'))
   startGoogleAuth() {
     return undefined
   }
 
   @Get('google/callback')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() request: Request, @Res() response: Response) {
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL')
@@ -48,6 +51,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   async getCurrentUser(@Req() request: Request) {
     if (!request.session.userId) return { user: null }
     const user = await this.authService.findActiveUser(request.session.userId)
@@ -55,6 +59,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   logout(@Req() request: Request, @Res() response: Response) {
     const origin = request.get('origin')
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL')
