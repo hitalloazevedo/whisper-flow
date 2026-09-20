@@ -4,6 +4,7 @@
 # set in .env — see .env.example.
 
 networks:
+  default:
   shared-db:
     external: true
 
