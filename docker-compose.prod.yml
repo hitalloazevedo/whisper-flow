@@ -25,6 +25,11 @@ services:
       MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is required}
     volumes:
       - minio_data:/data
+    ports:
+      # Loopback-only: the host nginx reverse-proxies pre-signed URL requests
+      # to this, per docs/ADR/010. S3_PUBLIC_ENDPOINT in .env must point at
+      # the nginx path that fronts it.
+      - '127.0.0.1:${MINIO_PORT:-9000}:9000'
     healthcheck:
       test: ['CMD', 'mc', 'ready', 'local']
       interval: 5s
