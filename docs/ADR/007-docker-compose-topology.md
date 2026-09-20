@@ -1,4 +1,4 @@
-# 0007. Docker Compose topology with migrations as a separate service
+# 007. Docker Compose topology with migrations as a separate service
 
 ## Status
 

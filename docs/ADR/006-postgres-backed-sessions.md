@@ -1,4 +1,4 @@
-# 0006. Postgres-backed sessions instead of Redis or JWT
+# 006. Postgres-backed sessions instead of Redis or JWT
 
 ## Status
 

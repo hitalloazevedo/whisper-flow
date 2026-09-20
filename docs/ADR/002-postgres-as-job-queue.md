@@ -1,4 +1,4 @@
-# 0002. Use Postgres as the job queue instead of RabbitMQ
+# 002. Use Postgres as the job queue instead of RabbitMQ
 
 ## Status
 
@@ -34,7 +34,7 @@ The `jobs` table *is* the queue; no broker.
   same table, so there's no dual-write problem.
 - **No redelivery on worker crash**: a job claimed then abandoned mid-crash
   stays `processing` forever unless something else reclaims it (closed in
-  [ADR 0003](0003-stale-job-reclaim-and-retry-backoff.md)).
+  [ADR 003](003-stale-job-reclaim-and-retry-backoff.md)).
 - No dead-letter queue or delivery metrics — anything like that has to be
   built directly against the `jobs` table.
 - Fine at current volume; revisit if the table's write load (claim/complete/

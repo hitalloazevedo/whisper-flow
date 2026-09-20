@@ -1,4 +1,4 @@
-# 0005. Manual trace-ID propagation instead of a tracing stack
+# 005. Manual trace-ID propagation instead of a tracing stack
 
 ## Status
 

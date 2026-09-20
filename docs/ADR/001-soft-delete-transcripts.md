@@ -1,4 +1,4 @@
-# 0001. Soft-delete transcripts
+# 001. Soft-delete transcripts
 
 ## Status
 

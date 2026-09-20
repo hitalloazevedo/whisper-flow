@@ -1,4 +1,4 @@
-# 0008. Lower the max upload size to 50MB
+# 008. Lower the max upload size to 50MB
 
 ## Status
 
@@ -16,7 +16,7 @@ instance can get through. The upload cap was 100MB (`uploadLimits.maxBytes`,
 relative to that constraint.
 
 A duration limit was considered but rejected for now — per
-[ADR 0004](0004-presigned-direct-to-s3-transfers.md), the backend never sees
+[ADR 004](004-presigned-direct-to-s3-transfers.md), the backend never sees
 uploaded bytes (presigned direct-to-S3), so enforcing an actual duration cap
 would require a decode step somewhere in the pipeline, which wasn't judged
 worth the added complexity yet.

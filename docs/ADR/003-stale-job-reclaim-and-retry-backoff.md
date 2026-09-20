@@ -1,4 +1,4 @@
-# 0003. Stale-processing reclaim and retry backoff
+# 003. Stale-processing reclaim and retry backoff
 
 ## Status
 
@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-[ADR 0002](0002-postgres-as-job-queue.md) flagged a gap: a worker that
+[ADR 002](002-postgres-as-job-queue.md) flagged a gap: a worker that
 claims a job then crashes leaves it stuck in `processing` forever. Separately,
 `mark_failed` already incremented `retryCount` on explicit failure but never
 acted on it — failed jobs stayed `failed` permanently.
@@ -34,14 +34,14 @@ Share one `retryCount` / 3-attempt ceiling, but recover differently per path:
   cooldown; stacking a further wait adds no new information.
 - The sweep lives in the **backend**, not the worker, so stale work keeps
   getting reclaimed even if the entire worker fleet is down — matching the
-  precedent set by `JobsPurgeService` (ADR 0001).
+  precedent set by `JobsPurgeService` (ADR 001).
 - `claim_next_job` still never looks at `processing` rows: claiming picks
   among many pending rows and needs `SKIP LOCKED`; reclaiming is a plain
   conditional `UPDATE` against a staleness predicate — different concerns.
 
 ## Consequences
 
-- The ADR 0002 gap is closed: a job is stuck for at most ~35 minutes
+- The ADR 002 gap is closed: a job is stuck for at most ~35 minutes
   (30-minute threshold + up to a 5-minute sweep tick) before being requeued.
 - `retryCount` is now shared across both failure modes — one budget,
   regardless of *how* an attempt failed.
