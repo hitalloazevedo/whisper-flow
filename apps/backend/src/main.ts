@@ -1,13 +1,19 @@
 import 'reflect-metadata'
 import { ConfigService } from '@nestjs/config'
-import connectPgSimple from 'connect-pg-simple'
-import session from 'express-session'
+// These packages expose callable CommonJS exports under the current TypeScript setup.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import connectPgSimple = require('connect-pg-simple')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import session = require('express-session')
 import { Pool } from 'pg'
+import type { NextFunction, Request, Response } from 'express'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
+import { createAppLogger } from './logging/app-logger'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const logger = createAppLogger()
+  const app = await NestFactory.create(AppModule, { logger })
   const configService = app.get(ConfigService)
   const frontendUrl = configService.getOrThrow<string>('FRONTEND_URL')
   const databaseUrl = configService.getOrThrow<string>('DATABASE_URL')
@@ -19,13 +25,28 @@ async function bootstrap() {
   if (process.env.NODE_ENV === 'production') {
     app.getHttpAdapter().getInstance().set('trust proxy', 1)
   }
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    const startedAt = Date.now()
+    response.on('finish', () => {
+      logger.log(
+        JSON.stringify({
+          event: 'http_request',
+          method: request.method,
+          path: request.path,
+          statusCode: response.statusCode,
+          durationMs: Date.now() - startedAt,
+        }),
+        'HTTP',
+      )
+    })
+    next()
+  })
   app.use(
     session({
       secret: sessionSecret,
       store: new PgSession({
         pool: sessionPool,
         tableName: 'user_sessions',
-        createTableIfMissing: true,
       }),
       resave: false,
       saveUninitialized: false,
@@ -40,7 +61,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3000)
   await app.listen(port)
-  console.log(`Whisper Flow API listening on http://localhost:${port}`)
+  logger.log(`Whisper Flow API listening on http://localhost:${port}`, 'Bootstrap')
 }
 
 void bootstrap()

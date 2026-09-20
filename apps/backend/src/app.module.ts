@@ -5,10 +5,36 @@ import { HealthController } from './health.controller'
 import { JobsController } from './jobs.controller'
 import { UploadLimitsController } from './upload-limits.controller'
 import { AuthModule } from './auth/auth.module'
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
+import { APP_GUARD } from '@nestjs/core'
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: (config) => {
+        const required = [
+          'DATABASE_URL',
+          'FRONTEND_URL',
+          'SESSION_SECRET',
+          'GOOGLE_CLIENT_ID',
+          'GOOGLE_CLIENT_SECRET',
+          'GOOGLE_CALLBACK_URL',
+        ]
+        const missing = required.filter((key) => !config[key])
+        if (missing.length > 0)
+          throw new Error(`Missing environment variables: ${missing.join(', ')}`)
+        if (
+          config.NODE_ENV === 'production' &&
+          (!config.FRONTEND_URL.startsWith('https://') ||
+            !config.GOOGLE_CALLBACK_URL.startsWith('https://'))
+        ) {
+          throw new Error('Production frontend and Google callback URLs must use HTTPS')
+        }
+        return config
+      },
+    }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     AuthModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -22,5 +48,6 @@ import { AuthModule } from './auth/auth.module'
     }),
   ],
   controllers: [HealthController, JobsController, UploadLimitsController],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

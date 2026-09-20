@@ -1,7 +1,7 @@
-import type { GoogleUser } from '../auth/auth.types'
+import 'express-session'
 
 declare module 'express-session' {
   interface SessionData {
-    user?: GoogleUser
+    userId?: string
   }
 }
