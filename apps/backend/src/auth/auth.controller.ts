@@ -38,7 +38,7 @@ export class AuthController {
   async googleCallback(@Req() request: Request, @Res() response: Response) {
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL')
     const user = await this.authService.findOrCreateGoogleUser(request.user as GoogleUser)
-    this.logger.log(JSON.stringify({ event: 'auth_google_success', userId: user.id }))
+    this.logger.log({ event: 'auth_google_success', userId: user.id })
 
     request.session.regenerate((error) => {
       if (error) return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send()
@@ -74,7 +74,7 @@ export class AuthController {
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
       })
-      this.logger.log(JSON.stringify({ event: 'auth_logout_success' }))
+      this.logger.log({ event: 'auth_logout_success' })
       return response.status(HttpStatus.NO_CONTENT).send()
     })
   }

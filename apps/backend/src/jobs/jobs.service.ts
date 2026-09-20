@@ -3,6 +3,7 @@ import { extname } from 'node:path'
 import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
+import { getCurrentTraceId } from '../logging/trace-context'
 import { StorageService } from '../storage/storage.service'
 import { uploadLimits } from '../upload-limits.controller'
 import { Job } from './job.entity'
@@ -59,6 +60,7 @@ export class JobsService {
         createdBy: userId,
         inputPath: finalKey,
         originalFilename: trimmedFilename.slice(0, MAX_FILENAME_LENGTH),
+        traceId: getCurrentTraceId() ?? null,
       }),
     )
   }

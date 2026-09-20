@@ -10,6 +10,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
 import { createAppLogger } from './logging/app-logger'
+import { traceIdMiddleware } from './logging/trace-id.middleware'
 
 async function bootstrap() {
   const logger = createAppLogger()
@@ -25,6 +26,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV === 'production') {
     app.getHttpAdapter().getInstance().set('trust proxy', 1)
   }
+  app.use(traceIdMiddleware)
   app.use((request: Request, response: Response, next: NextFunction) => {
     const startedAt = Date.now()
     response.on('finish', () => {

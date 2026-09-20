@@ -50,6 +50,33 @@ services:
       mc ilm rule add --expire-days 1 --prefix 'pending-uploads/' local/whisper-flow-audio
       "
 
+  worker:
+    build:
+      context: ./apps/worker
+    container_name: whisper-flow-worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/whisper_flow
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: whisper-flow-audio
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadmin
+      S3_FORCE_PATH_STYLE: 'true'
+      WHISPER_MODEL: base
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+      POLL_INTERVAL_SECONDS: '5'
+      LOG_LEVEL: info
+    volumes:
+      - whisper_model_cache:/root/.cache/huggingface
+
 volumes:
   postgres_data:
   minio_data:
+  whisper_model_cache:

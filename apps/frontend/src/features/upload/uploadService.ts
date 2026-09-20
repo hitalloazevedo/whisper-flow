@@ -1,4 +1,5 @@
 import { apiUrl } from '../../config/api'
+import { apiFetch } from '../../config/apiClient'
 import type { Job } from '../../types'
 
 async function parseErrorMessage(response: Response, fallback: string): Promise<string> {
@@ -13,12 +14,14 @@ async function parseErrorMessage(response: Response, fallback: string): Promise<
 export async function getPresignedUploadUrl(
   filename: string,
   contentType: string,
+  traceId: string,
 ): Promise<{ uploadUrl: string; key: string; expiresInSeconds: number }> {
-  const response = await fetch(apiUrl('/api/v1/jobs/upload-url'), {
+  const response = await apiFetch('/api/v1/jobs/upload-url', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ filename, contentType }),
+    traceId,
   })
   if (!response.ok) {
     throw new Error(await parseErrorMessage(response, 'Failed to get presigned upload URL'))
@@ -66,12 +69,17 @@ export async function uploadFileToS3(
   })
 }
 
-export async function createJobFromUpload(key: string, filename: string): Promise<Job> {
-  const response = await fetch(apiUrl('/api/v1/jobs'), {
+export async function createJobFromUpload(
+  key: string,
+  filename: string,
+  traceId: string,
+): Promise<Job> {
+  const response = await apiFetch('/api/v1/jobs', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ key, filename }),
+    traceId,
   })
   if (!response.ok) {
     throw new Error(await parseErrorMessage(response, 'Failed to create job'))

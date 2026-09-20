@@ -43,6 +43,9 @@ export class Job {
   originalFilename!: string
 
   @Column({ type: 'varchar', nullable: true })
+  traceId!: string | null
+
+  @Column({ type: 'varchar', nullable: true })
   outputPath!: string | null
 
   @Column({ type: 'varchar', nullable: true })

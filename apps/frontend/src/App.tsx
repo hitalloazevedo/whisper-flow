@@ -100,18 +100,19 @@ function App() {
   async function addJob(file: File) {
     setIsUploading(true)
     setUploadError(null)
+    const traceId = crypto.randomUUID()
 
     try {
       const contentType = file.type || 'application/octet-stream'
-      const { uploadUrl, key } = await getPresignedUploadUrl(file.name, contentType)
+      const { uploadUrl, key } = await getPresignedUploadUrl(file.name, contentType, traceId)
       await uploadFileToS3(uploadUrl, file, contentType)
-      const newJob = await createJobFromUpload(key, file.name)
+      const newJob = await createJobFromUpload(key, file.name, traceId)
 
       setJobs((currentJobs) => [newJob, ...currentJobs])
       setIsUploadModalOpen(false)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload failed'
-      setUploadError(message)
+      setUploadError(`${message} (trace: ${traceId})`)
     } finally {
       setIsUploading(false)
     }
