@@ -14,7 +14,9 @@ export async function getUploadLimits(signal?: AbortSignal): Promise<UploadLimit
 }
 
 export function formatUploadLimit(bytes: number) {
-  return `${Math.round(bytes / 1024 / 1024 / 1024)} GB`
+  const gigabytes = bytes / 1024 / 1024 / 1024
+  if (gigabytes >= 1) return `${Math.round(gigabytes)} GB`
+  return `${Math.round(bytes / 1024 / 1024)} MB`
 }
 
 export function validateUpload(file: File, limits: UploadLimits): string | null {

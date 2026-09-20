@@ -1,4 +1,5 @@
 import { Plus, ShieldCheck, UploadCloud } from 'lucide-react'
+import { formatUploadLimit } from '../features/upload/uploadLimits'
 import type { Job, UploadLimits } from '../types'
 import { JobList } from './JobList'
 import { UploadModal } from './UploadModal'
@@ -59,7 +60,10 @@ export function Dashboard({
               <Plus size={22} />
             </span>
             <strong>Choose an audio file</strong>
-            <span>MP3, WAV, M4A, MP4 or WEBM · up to 2 GB</span>
+            <span>
+              {limits.acceptedExtensions.map((extension) => extension.toUpperCase()).join(', ')} ·
+              up to {formatUploadLimit(limits.maxBytes)}
+            </span>
           </button>
           <div className="upload-note">
             <ShieldCheck size={15} /> Your recordings stay private to your workspace.
