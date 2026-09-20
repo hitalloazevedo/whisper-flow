@@ -108,7 +108,6 @@ services:
   worker:
     build:
       context: ./apps/worker
-    container_name: whisper-flow-worker
     restart: unless-stopped
     depends_on:
       postgres:

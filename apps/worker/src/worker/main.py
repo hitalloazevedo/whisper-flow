@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from . import db, processor, storage
 from .config import Config
 from .health import HealthState, start_health_server
+from .heartbeat import WorkerState, start_heartbeat_loop
 from .logging_utils import configure_logging, get_logger, log_event
 from .transcriber import Transcriber
 
@@ -28,6 +29,9 @@ def run() -> None:
 
     health_state = HealthState()
     health_server = start_health_server(health_state, config.health_port)
+
+    worker_state = WorkerState()
+    start_heartbeat_loop(config.database_url, worker_state, config.heartbeat_interval_seconds)
 
     conn = db.connect(config.database_url)
     db.listen_for_new_jobs(conn)
@@ -52,7 +56,9 @@ def run() -> None:
             db.wait_for_notification(conn, config.poll_interval_seconds)
             continue
 
+        worker_state.set_processing(job["id"])
         processor.process_job(conn, s3_client, transcriber, config.s3_bucket, job)
+        worker_state.set_idle()
 
     health_state.set_ready(False)
     health_server.shutdown()

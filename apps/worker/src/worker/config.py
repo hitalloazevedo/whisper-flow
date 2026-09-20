@@ -28,6 +28,7 @@ class Config:
     poll_interval_seconds: float
     log_level: str
     health_port: int
+    heartbeat_interval_seconds: float
 
     @staticmethod
     def from_env() -> "Config":
@@ -45,4 +46,5 @@ class Config:
             poll_interval_seconds=float(os.environ.get("POLL_INTERVAL_SECONDS", "5")),
             log_level=os.environ.get("LOG_LEVEL", "INFO"),
             health_port=int(os.environ.get("HEALTH_PORT", "8000")),
+            heartbeat_interval_seconds=float(os.environ.get("HEARTBEAT_INTERVAL_SECONDS", "10")),
         )

@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { ScheduleModule } from '@nestjs/schedule'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { HealthController } from './health.controller'
 import { UploadLimitsController } from './upload-limits.controller'
 import { AuthModule } from './auth/auth.module'
+import { HealthModule } from './health/health.module'
 import { JobsModule } from './jobs/jobs.module'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
@@ -43,6 +43,7 @@ import { APP_GUARD } from '@nestjs/core'
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     ScheduleModule.forRoot(),
     AuthModule,
+    HealthModule,
     JobsModule,
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -55,7 +56,7 @@ import { APP_GUARD } from '@nestjs/core'
       }),
     }),
   ],
-  controllers: [HealthController, UploadLimitsController],
+  controllers: [UploadLimitsController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

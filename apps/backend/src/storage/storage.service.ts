@@ -4,6 +4,7 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   HeadObjectCommand,
   NotFound,
   PutObjectCommand,
@@ -75,5 +76,9 @@ export class StorageService {
 
   async deleteObject(key: string) {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }))
+  }
+
+  async pingBucket() {
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }))
   }
 }
