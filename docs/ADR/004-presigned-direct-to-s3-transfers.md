@@ -1,9 +1,5 @@
 # 004. Presigned direct-to-S3 uploads and downloads
 
-## Status
-
-Accepted
-
 ## Context
 
 Audio uploads (up to 50MB, see [ADR 008](008-lower-upload-size-limit.md)) and transcript downloads need to move between the

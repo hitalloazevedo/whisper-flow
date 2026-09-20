@@ -1,9 +1,5 @@
 # 005. Manual trace-ID propagation instead of a tracing stack
 
-## Status
-
-Accepted
-
 ## Context
 
 A single upload crosses three processes in two languages: the frontend, the

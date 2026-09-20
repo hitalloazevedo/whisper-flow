@@ -1,9 +1,5 @@
 # 002. Use Postgres as the job queue instead of RabbitMQ
 
-## Status
-
-Accepted
-
 ## Context
 
 The backend creates transcription jobs; the worker processes them

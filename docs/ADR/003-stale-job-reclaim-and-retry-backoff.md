@@ -1,9 +1,5 @@
 # 003. Stale-processing reclaim and retry backoff
 
-## Status
-
-Accepted
-
 ## Context
 
 [ADR 002](002-postgres-as-job-queue.md) flagged a gap: a worker that

@@ -1,9 +1,5 @@
 # 006. Postgres-backed sessions instead of Redis or JWT
 
-## Status
-
-Accepted
-
 ## Context
 
 The API needs to track authenticated users after Google OAuth login. The

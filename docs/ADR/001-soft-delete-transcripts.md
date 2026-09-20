@@ -1,9 +1,5 @@
 # 001. Soft-delete transcripts
 
-## Status
-
-Accepted
-
 ## Context
 
 Users need to delete a transcript (a `jobs` row, `apps/backend/src/jobs/job.entity.ts`).

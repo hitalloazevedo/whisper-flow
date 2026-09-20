@@ -1,9 +1,5 @@
 # 007. Docker Compose topology with migrations as a separate service
 
-## Status
-
-Accepted
-
 ## Context
 
 The system has independently-scalable pieces (API, Python worker, frontend)
