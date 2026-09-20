@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.turbo
+**/.venv
+**/__pycache__
+**/.pytest_cache
+.git
+.env
+**/.env
+**/.env.*
+!**/.env.example

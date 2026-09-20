@@ -50,6 +50,61 @@ services:
       mc ilm rule add --expire-days 1 --prefix 'pending-uploads/' local/whisper-flow-audio
       "
 
+  backend-migrate:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: whisper-flow-backend-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/whisper_flow
+    command: ['node', 'dist/database/run-migrations.js']
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: whisper-flow-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      backend-migrate:
+        condition: service_completed_successfully
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      PORT: '3000'
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/whisper_flow
+      FRONTEND_URL: http://localhost:5173
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: whisper-flow-audio
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadmin
+      S3_FORCE_PATH_STYLE: 'true'
+    ports:
+      - '3000:3000'
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
+    container_name: whisper-flow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '5173:80'
+
   worker:
     build:
       context: ./apps/worker
