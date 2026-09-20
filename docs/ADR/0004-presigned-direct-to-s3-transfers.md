@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-Audio uploads (up to 100MB) and transcript downloads need to move between the
+Audio uploads (up to 50MB, see [ADR 0008](0008-lower-upload-size-limit.md)) and transcript downloads need to move between the
 browser and blob storage. Routing that traffic through the NestJS API would
 tie up backend connections and memory on large binary bodies for the entire
 transfer duration.

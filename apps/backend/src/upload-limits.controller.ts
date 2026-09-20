@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common'
 
 export const uploadLimits = {
-  maxBytes: 100 * 1024 * 1024,
+  maxBytes: 50 * 1024 * 1024,
   acceptedExtensions: ['mp3', 'wav', 'm4a', 'mp4', 'webm'],
 }
 

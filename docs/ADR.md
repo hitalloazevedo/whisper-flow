@@ -11,3 +11,4 @@ Index of ADRs. Records live in [docs/ADR/](ADR/).
 | [0005](ADR/0005-manual-trace-id-propagation.md) | Manual trace-ID propagation instead of a tracing stack | Accepted |
 | [0006](ADR/0006-postgres-backed-sessions.md) | Postgres-backed sessions instead of Redis or JWT | Accepted |
 | [0007](ADR/0007-docker-compose-topology.md) | Docker Compose topology with migrations as a separate service | Accepted |
+| [0008](ADR/0008-lower-upload-size-limit.md) | Lower the max upload size to 50MB | Accepted |

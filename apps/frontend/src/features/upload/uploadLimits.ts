@@ -3,7 +3,7 @@ import { apiUrl } from '../../config/api'
 
 // Temporary fallback for local development if GET /api/v1/upload-limits is unavailable.
 export const mockedUploadLimits: UploadLimits = {
-  maxBytes: 2 * 1024 * 1024 * 1024,
+  maxBytes: 50 * 1024 * 1024,
   acceptedExtensions: ['mp3', 'wav', 'm4a', 'mp4', 'webm'],
 }
 
