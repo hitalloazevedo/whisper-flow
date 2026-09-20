@@ -37,15 +37,25 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() request: Request, @Res() response: Response) {
+    this.logger.log('googleCallback -> ATTEMPTING', {})
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL')
     const user = await this.authService.findOrCreateGoogleUser(request.user as GoogleUser)
-    this.logger.log({ event: 'auth_google_success', userId: user.id })
 
     request.session.regenerate((error) => {
-      if (error) return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send()
+      if (error) {
+        this.logger.error('googleCallback -> ERROR', { userId: user.id, error: error.message })
+        return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send()
+      }
       request.session.userId = user.id
       request.session.save((saveError) => {
-        if (saveError) return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send()
+        if (saveError) {
+          this.logger.error('googleCallback -> ERROR', {
+            userId: user.id,
+            error: saveError.message,
+          })
+          return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send()
+        }
+        this.logger.log('googleCallback -> SUCCESS', { userId: user.id })
         return response.redirect(frontendUrl)
       })
     })
@@ -62,20 +72,25 @@ export class AuthController {
   @Post('logout')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   logout(@Req() request: Request, @Res() response: Response) {
+    this.logger.log('logout -> ATTEMPTING', {})
     const origin = request.get('origin')
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL')
     if (origin !== frontendOrigin(frontendUrl)) {
+      this.logger.error('logout -> ERROR', { error: 'Invalid request origin' })
       return response.status(HttpStatus.FORBIDDEN).json({ message: 'Invalid request origin' })
     }
 
     request.session.destroy((error) => {
-      if (error) return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send()
+      if (error) {
+        this.logger.error('logout -> ERROR', { error: error.message })
+        return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send()
+      }
       response.clearCookie('connect.sid', {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
       })
-      this.logger.log({ event: 'auth_logout_success' })
+      this.logger.log('logout -> SUCCESS', {})
       return response.status(HttpStatus.NO_CONTENT).send()
     })
   }

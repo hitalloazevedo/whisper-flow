@@ -64,15 +64,20 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3000)
   await app.listen(port)
-  logger.log(`Whisper Flow API listening on http://localhost:${port}`, 'Bootstrap')
+  logger.log('bootstrap -> SUCCESS', { port }, 'Bootstrap')
 
   const shutdown = async (signal: string) => {
-    logger.log({ event: 'shutdown_started', signal }, 'Bootstrap')
+    logger.log('shutdown -> ATTEMPTING', { signal }, 'Bootstrap')
     try {
       await app.close()
       await sessionPool.end()
+      logger.log('shutdown -> SUCCESS', { signal }, 'Bootstrap')
     } catch (error) {
-      logger.error({ event: 'shutdown_failed', signal, error }, 'Bootstrap')
+      logger.error(
+        'shutdown -> ERROR',
+        { signal, error: error instanceof Error ? error.message : String(error) },
+        'Bootstrap',
+      )
       process.exitCode = 1
     }
   }

@@ -38,6 +38,7 @@ export class JobEventsService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async connect(): Promise<void> {
+    this.logger.log('connect -> ATTEMPTING', { channel: NEW_JOB_CHANNEL })
     const client = new Client({ connectionString: this.databaseUrl })
 
     client.on('notification', (message) => {
@@ -45,12 +46,15 @@ export class JobEventsService implements OnModuleInit, OnModuleDestroy {
       try {
         this.events$.next(JSON.parse(message.payload) as JobEventPayload)
       } catch (error) {
-        this.logger.warn(`Discarding malformed job notification payload: ${String(error)}`)
+        this.logger.error('connect -> ERROR', {
+          reason: 'malformed job notification payload',
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     })
 
     client.on('error', (error) => {
-      this.logger.error(`Job events connection error: ${error.message}`)
+      this.logger.error('connect -> ERROR', { reason: 'connection error', error: error.message })
       this.scheduleReconnect()
     })
 
@@ -62,9 +66,12 @@ export class JobEventsService implements OnModuleInit, OnModuleDestroy {
       await client.connect()
       await client.query(`LISTEN ${NEW_JOB_CHANNEL}`)
       this.client = client
-      this.logger.log(`Listening for job events on "${NEW_JOB_CHANNEL}"`)
+      this.logger.log('connect -> SUCCESS', { channel: NEW_JOB_CHANNEL })
     } catch (error) {
-      this.logger.error(`Failed to connect for job events: ${String(error)}`)
+      this.logger.error('connect -> ERROR', {
+        reason: 'failed to connect',
+        error: error instanceof Error ? error.message : String(error),
+      })
       this.scheduleReconnect()
     }
   }
