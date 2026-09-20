@@ -773,6 +773,12 @@ footer {
     monospace;
 }
 @media (max-width: 760px) {
+  .health-page {
+    padding: 28px 22px;
+  }
+  .health-grid {
+    grid-template-columns: 1fr;
+  }
   .app-shell {
     padding: 0 22px 28px;
   }
@@ -814,4 +820,121 @@ footer {
   footer {
     margin-top: 52px;
   }
+}
+.health-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 52px;
+  font-family: 'Manrope', sans-serif;
+  color: var(--wf-ink);
+}
+.health-page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.health-page-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.health-error {
+  color: #b15d4d;
+  font:
+    12px 'DM Mono',
+    monospace;
+}
+.health-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+.health-card {
+  padding: 20px 24px;
+  background: var(--wf-panel);
+  border: 1px solid var(--wf-line);
+  border-radius: 12px;
+}
+.health-card-wide {
+  grid-column: 1 / -1;
+}
+.health-card-detail {
+  margin: 8px 0 0;
+  color: var(--wf-muted);
+  font:
+    11px 'DM Mono',
+    monospace;
+}
+.health-card h2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.health-card-subtitle {
+  color: var(--wf-muted);
+  font:
+    11px 'DM Mono',
+    monospace;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.health-empty {
+  margin: 0;
+  color: var(--wf-muted);
+  font-size: 13px;
+}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font:
+    10px 'DM Mono',
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.status-badge.ok {
+  color: #3f866e;
+  background: rgba(63, 134, 110, 0.14);
+}
+.status-badge.degraded {
+  color: #9a7a1f;
+  background: rgba(198, 163, 81, 0.18);
+}
+.status-badge.down {
+  color: #b15d4d;
+  background: rgba(177, 93, 77, 0.14);
+}
+.worker-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.worker-table th {
+  padding: 6px 10px;
+  color: var(--wf-muted);
+  font:
+    10px 'DM Mono',
+    monospace;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--wf-line);
+}
+.worker-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--wf-line);
+}
+.health-footer {
+  margin-top: 20px;
+  color: var(--wf-muted);
+  font:
+    11px 'DM Mono',
+    monospace;
 }

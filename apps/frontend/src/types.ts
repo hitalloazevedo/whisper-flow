@@ -30,3 +30,30 @@ export type AuthUser = {
   displayName: string
   avatarUrl?: string
 }
+
+export type HealthCheckStatus = 'ok' | 'down'
+export type HealthStatus = 'ok' | 'degraded' | 'down'
+
+export type WorkerHeartbeat = {
+  hostname: string
+  pid: number
+  status: string
+  currentJobId: string | null
+  lastSeenAt: string
+  online: boolean
+}
+
+export type HealthResponse = {
+  status: HealthStatus
+  service: string
+  checks: {
+    database: { status: HealthCheckStatus }
+    storage: { status: HealthCheckStatus }
+    workers: {
+      status: HealthCheckStatus
+      total: number
+      online: number
+      workers: WorkerHeartbeat[]
+    }
+  }
+}

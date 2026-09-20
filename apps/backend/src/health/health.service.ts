@@ -35,18 +35,22 @@ export class HealthService {
   }
 
   private async checkWorkers() {
-    const rows = await this.heartbeats.find()
-    const cutoff = new Date(Date.now() - WORKER_STALE_THRESHOLD_SECONDS * 1000)
-    const workers = rows.map((row) => ({
-      hostname: row.hostname,
-      pid: row.pid,
-      status: row.status,
-      currentJobId: row.currentJobId,
-      lastSeenAt: row.lastSeenAt,
-      online: row.lastSeenAt >= cutoff,
-    }))
-    const online = workers.filter((worker) => worker.online).length
-    return { status: online > 0 ? 'ok' : 'down', total: workers.length, online, workers }
+    try {
+      const rows = await this.heartbeats.find()
+      const cutoff = new Date(Date.now() - WORKER_STALE_THRESHOLD_SECONDS * 1000)
+      const workers = rows.map((row) => ({
+        hostname: row.hostname,
+        pid: row.pid,
+        status: row.status,
+        currentJobId: row.currentJobId,
+        lastSeenAt: row.lastSeenAt,
+        online: row.lastSeenAt >= cutoff,
+      }))
+      const online = workers.filter((worker) => worker.online).length
+      return { status: online > 0 ? 'ok' : 'down', total: workers.length, online, workers }
+    } catch {
+      return { status: 'down' as const, total: 0, online: 0, workers: [] }
+    }
   }
 
   async getStatus() {
