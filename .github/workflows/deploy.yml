@@ -107,34 +107,27 @@ jobs:
             PROJECT_NAME=$(basename "$PWD")
             COMPOSE="podman compose -f docker-compose.prod.yml"
 
+            # Tear the whole stack down before bringing it back up. podman-
+            # compose's recreate/exclude heuristics (hash comparison,
+            # service-name scoping) have proven unreliable in this podman
+            # version — see git history on this file. Rather than patch
+            # around each new failure mode, every deploy always starts from
+            # a guaranteed-empty state: recreate logic never has anything
+            # pre-existing to get confused by. Named volumes (minio_data,
+            # whisper_model_cache) are untouched by `down` without `-v`.
+            $COMPOSE down --remove-orphans
+
             $COMPOSE pull
 
             # Staged manually instead of via `depends_on` — podman 4.9.3's
             # `--requires` dependency-graph resolver unreliably fails to find
             # already-running containers created by an earlier `podman run`
             # call ("not found in input list"). See docker-compose.prod.yml.
-            #
-            # minio isn't force-recreated: its image is always :latest with
-            # no per-deploy tag change, so there's nothing to pick up.
             $COMPOSE up -d minio
             timeout 60 sh -c "until podman healthcheck run ${PROJECT_NAME}_minio_1; do sleep 2; done"
 
-            # --force-recreate: when service names are passed explicitly (as
-            # here), podman-compose's hash-based recreate check unreliably
-            # no-ops and falls back to `podman start` on whatever container
-            # already has that name — silently keeping the OLD image running
-            # instead of picking up the newly pulled one.
-            #
-            # minio-init and backend-migrate are two separate single-service
-            # calls, not one `up -d minio-init backend-migrate`: podman-
-            # compose's service-scoping has a separate bug where `minio`
-            # isn't excluded from that specific two-service combination (it
-            # is correctly excluded from the single-service minio stage and
-            # the backend/worker/frontend stage) — with --force-recreate
-            # active, that stray inclusion tore minio down as collateral
-            # damage and it didn't come back.
-            $COMPOSE up -d --force-recreate minio-init
-            $COMPOSE up -d --force-recreate backend-migrate
+            $COMPOSE up -d minio-init
+            $COMPOSE up -d backend-migrate
             INIT_EXIT=$(podman wait "${PROJECT_NAME}_minio-init_1")
             MIGRATE_EXIT=$(podman wait "${PROJECT_NAME}_backend-migrate_1")
             if [ "$INIT_EXIT" != "0" ] || [ "$MIGRATE_EXIT" != "0" ]; then
@@ -142,7 +135,7 @@ jobs:
               exit 1
             fi
 
-            $COMPOSE up -d --force-recreate --remove-orphans backend worker frontend
+            $COMPOSE up -d backend worker frontend
 
             # Verify every expected container is actually running before
             # cleaning up — pruning first would silently delete the evidence

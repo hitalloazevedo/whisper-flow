@@ -26,27 +26,26 @@ each app running its own Postgres container.
 - The `deploy` job SSHes into the VPS (`appleboy/ssh-action`, using the
   `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY`/`VPS_PORT`/`VPS_DEPLOY_PATH` repo
   secrets), `podman login`s with the job's own `GITHUB_TOKEN` (valid only for
-  the run's duration), pulls, then brings services up in four explicit
-  single- or few-service `up -d` calls — `minio`; `minio-init`; then
-  `backend-migrate` (waiting for the latter two to exit 0); then
-  `backend`/`worker`/`frontend` — instead of one `up -d --remove-orphans`.
+  the run's duration), and runs `podman compose down --remove-orphans`
+  before every pull/`up` — never a bare `up -d` against a stack that might
+  already be running. podman-compose's recreate/exclude heuristics (hash
+  comparison, service-name scoping) proved unreliable across several
+  podman-compose/podman versions worth of patching; tearing the stack down
+  first means `up` always starts from a guaranteed-empty state, so that
+  logic never has anything pre-existing to get confused by. `down` without
+  `-v` leaves the named volumes (`minio_data`, `whisper_model_cache`)
+  intact, so this costs brief downtime per deploy, not data loss — an
+  acceptable trade for a manually-triggered, single-instance deploy.
+- After `down`, services come up in four explicit `up -d` calls — `minio`;
+  `minio-init`; `backend-migrate` (waiting for the latter two to exit 0);
+  then `backend`/`worker`/`frontend` — instead of one `up -d`.
   `docker-compose.prod.yml` has no `depends_on` between services; podman
   4.9.3's `--requires` dependency-graph resolver unreliably fails to find
   already-running containers referenced transitively through it, so
-  ordering is enforced by the deploy script itself, not podman.
-- `minio-init`/`backend-migrate`/`backend`/`worker`/`frontend` are brought
-  up with `--force-recreate` (`minio` is not — its image is always
-  `:latest`, nothing to pick up): when service names are passed explicitly,
-  podman-compose's hash-based recreate check unreliably no-ops and falls
-  back to `podman start` on whatever container already holds that name,
-  silently leaving the old image running instead of the newly pulled one.
-  `minio-init` and `backend-migrate` are two separate single-service calls
-  rather than one combined call — podman-compose's service-scoping has a
-  distinct bug where `minio` isn't excluded from that specific two-service
-  combination, and with `--force-recreate` active that stray inclusion
-  tore `minio` down as collateral damage. The script verifies every
-  container is actually `running` before pruning, so a future failure
-  leaves diagnosable state instead of the prune step silently deleting it.
+  ordering is enforced by the deploy script itself, not podman. The script
+  verifies every container is actually `running` before pruning, so a
+  future failure leaves diagnosable state instead of the prune step
+  silently deleting it.
 - `docker-compose.prod.yml` mirrors the dev topology from ADR 007 but
   references `ghcr.io/${GHCR_NAMESPACE}/whisper-flow-*:${IMAGE_TAG}` images
   instead of `build:` blocks, drops the `postgres` service entirely, and
@@ -90,6 +89,10 @@ each app running its own Postgres container.
 - No CI runs on push — a broken `main` isn't caught until someone manually
   triggers a deploy. No automated rollback if the new images fail health
   checks; `podman compose ps` must be checked manually after a deploy.
+- The stack is fully down for the ~30s between `podman compose down` and
+  all services reporting healthy again — acceptable for a manually
+  triggered deploy of a single-instance app, not for one expecting
+  zero-downtime deploys.
 - One fewer container to run and back up, but the app now depends on
   infrastructure (`shared-db`, the DB itself) that lives outside this
   repo's compose file — `podman compose down -v` here can no longer wipe
