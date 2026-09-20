@@ -15,6 +15,7 @@ import { Throttle } from '@nestjs/throttler'
 import type { Request, Response } from 'express'
 import type { GoogleUser } from './auth.types'
 import { AuthService } from './auth.service'
+import { frontendOrigin } from '../frontend-url'
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -63,7 +64,7 @@ export class AuthController {
   logout(@Req() request: Request, @Res() response: Response) {
     const origin = request.get('origin')
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL')
-    if (origin !== new URL(frontendUrl).origin) {
+    if (origin !== frontendOrigin(frontendUrl)) {
       return response.status(HttpStatus.FORBIDDEN).json({ message: 'Invalid request origin' })
     }
 

@@ -9,6 +9,7 @@ import { Pool } from 'pg'
 import type { NextFunction, Request, Response } from 'express'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
+import { frontendOrigin } from './frontend-url'
 import { createAppLogger } from './logging/app-logger'
 import { traceIdMiddleware } from './logging/trace-id.middleware'
 
@@ -22,7 +23,7 @@ async function bootstrap() {
   const PgSession = connectPgSimple(session)
   const sessionPool = new Pool({ connectionString: databaseUrl })
 
-  app.enableCors({ origin: new URL(frontendUrl).origin, credentials: true })
+  app.enableCors({ origin: frontendOrigin(frontendUrl), credentials: true })
   if (process.env.NODE_ENV === 'production') {
     app.getHttpAdapter().getInstance().set('trust proxy', 1)
   }
