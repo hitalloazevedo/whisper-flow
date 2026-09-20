@@ -66,3 +66,45 @@ def test_connect_enables_autocommit():
         conn = db.connect("postgresql://localhost/test")
 
         assert conn.autocommit is True
+
+
+def test_claim_next_job_excludes_pending_jobs_with_a_future_next_attempt():
+    conn, cursor = make_conn()
+    cursor.fetchone.return_value = None
+
+    db.claim_next_job(conn)
+
+    sql = cursor.execute.call_args.args[0]
+    assert "nextAttemptAt" in sql
+    assert "status = 'pending'::jobs_status_enum" in sql
+
+
+def test_claim_next_job_returns_the_claimed_row():
+    conn, cursor = make_conn()
+    cursor.fetchone.return_value = {"id": "job-1", "createdBy": "user-1"}
+
+    job = db.claim_next_job(conn)
+
+    assert job == {"id": "job-1", "createdBy": "user-1"}
+
+
+def test_mark_failed_passes_the_error_message_and_retry_limit():
+    conn, cursor = make_conn()
+
+    db.mark_failed(conn, "job-1", "boom")
+
+    params = cursor.execute.call_args.args[1]
+    assert params == {
+        "job_id": "job-1",
+        "max_retries": db.MAX_RETRIES,
+        "error_message": "boom",
+    }
+
+
+def test_mark_failed_truncates_a_long_error_message():
+    conn, cursor = make_conn()
+
+    db.mark_failed(conn, "job-1", "x" * 3000)
+
+    params = cursor.execute.call_args.args[1]
+    assert len(params["error_message"]) == 2000
