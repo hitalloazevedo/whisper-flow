@@ -14,7 +14,6 @@ import { createAppLogger } from './logging/app-logger'
 async function bootstrap() {
   const logger = createAppLogger()
   const app = await NestFactory.create(AppModule, { logger })
-  app.enableShutdownHooks()
   const configService = app.get(ConfigService)
   const frontendUrl = configService.getOrThrow<string>('FRONTEND_URL')
   const databaseUrl = configService.getOrThrow<string>('DATABASE_URL')
@@ -66,8 +65,13 @@ async function bootstrap() {
 
   const shutdown = async (signal: string) => {
     logger.log({ event: 'shutdown_started', signal }, 'Bootstrap')
-    await app.close()
-    await sessionPool.end()
+    try {
+      await app.close()
+      await sessionPool.end()
+    } catch (error) {
+      logger.error({ event: 'shutdown_failed', signal, error }, 'Bootstrap')
+      process.exitCode = 1
+    }
   }
   process.once('SIGTERM', () => void shutdown('SIGTERM'))
   process.once('SIGINT', () => void shutdown('SIGINT'))
