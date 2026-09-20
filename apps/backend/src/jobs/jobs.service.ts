@@ -1,12 +1,18 @@
 import { randomUUID } from 'node:crypto'
 import { extname } from 'node:path'
-import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { getCurrentTraceId } from '../logging/trace-context'
 import { StorageService } from '../storage/storage.service'
 import { uploadLimits } from '../upload-limits.controller'
-import { Job } from './job.entity'
+import { Job, JobStatus } from './job.entity'
 
 const PENDING_UPLOAD_PREFIX = 'pending-uploads'
 const UPLOAD_PREFIX = 'uploads'
@@ -67,5 +73,17 @@ export class JobsService {
 
   async findJobsForUser(userId: string) {
     return this.jobs.find({ where: { createdBy: userId }, order: { createdAt: 'DESC' } })
+  }
+
+  async getTranscriptDownloadUrl(userId: string, jobId: string) {
+    const job = await this.jobs.findOne({ where: { id: jobId } })
+    if (!job || job.createdBy !== userId) {
+      throw new NotFoundException('Job not found')
+    }
+    if (job.status !== JobStatus.Completed || !job.outputPath) {
+      throw new BadRequestException('Transcript is not available for this job')
+    }
+
+    return this.storageService.createPresignedDownloadUrl(job.outputPath)
   }
 }

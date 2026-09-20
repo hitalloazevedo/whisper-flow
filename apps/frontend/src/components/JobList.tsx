@@ -1,7 +1,7 @@
-import { CheckCircle2, Clock3, FileAudio } from 'lucide-react'
+import { CheckCircle2, Clock3, FileAudio, FileText } from 'lucide-react'
 import type { Job } from '../types'
 
-type JobListProps = { jobs: Job[] }
+type JobListProps = { jobs: Job[]; onViewTranscript: (job: Job) => void }
 
 function formatDate(date: string): string {
   const d = new Date(date)
@@ -19,7 +19,7 @@ function formatDate(date: string): string {
   return d.toLocaleDateString()
 }
 
-export function JobList({ jobs }: JobListProps) {
+export function JobList({ jobs, onViewTranscript }: JobListProps) {
   if (!jobs || jobs.length === 0) {
     return <div className="job-list" />
   }
@@ -40,9 +40,17 @@ export function JobList({ jobs }: JobListProps) {
             {job.status}
           </span>
           <span className="job-duration">—</span>
-          <button className="row-menu" aria-label={`Open ${job.originalFilename} actions`}>
-            •••
-          </button>
+          {job.status === 'completed' ? (
+            <button
+              className="row-menu"
+              aria-label={`View transcript for ${job.originalFilename}`}
+              onClick={() => onViewTranscript(job)}
+            >
+              <FileText size={16} />
+            </button>
+          ) : (
+            <span className="row-menu" aria-hidden="true" />
+          )}
         </article>
       ))}
     </div>

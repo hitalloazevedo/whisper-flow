@@ -1,5 +1,10 @@
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
+export type JobStatusEvent = {
+  id: string
+  status: JobStatus
+}
+
 export type Job = {
   id: string
   status: JobStatus

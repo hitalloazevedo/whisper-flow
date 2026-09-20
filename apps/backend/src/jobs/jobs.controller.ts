@@ -4,13 +4,18 @@ import {
   Controller,
   Get,
   Inject,
+  MessageEvent,
+  Param,
   Post,
   Req,
+  Sse,
   UseGuards,
 } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
 import type { Request } from 'express'
+import { Observable, filter, map } from 'rxjs'
 import { AuthenticatedGuard } from '../auth/authenticated.guard'
+import { JobEventsService } from './job-events.service'
 import { JobsService } from './jobs.service'
 
 interface CreateUploadUrlBody {
@@ -26,12 +31,29 @@ interface CreateJobBody {
 @Controller('api/v1/jobs')
 @UseGuards(AuthenticatedGuard)
 export class JobsController {
-  constructor(@Inject(JobsService) private readonly jobsService: JobsService) {}
+  constructor(
+    @Inject(JobsService) private readonly jobsService: JobsService,
+    @Inject(JobEventsService) private readonly jobEventsService: JobEventsService,
+  ) {}
 
   @Get()
   async getJobs(@Req() request: Request) {
     const jobs = await this.jobsService.findJobsForUser(request.session.userId!)
     return { jobs }
+  }
+
+  @Sse('events')
+  jobEvents(@Req() request: Request): Observable<MessageEvent> {
+    const userId = request.session.userId!
+    return this.jobEventsService.events$.pipe(
+      filter((event) => event.createdBy === userId),
+      map((event) => ({ data: { id: event.id, status: event.status } })),
+    )
+  }
+
+  @Get(':id/transcript-url')
+  async getTranscriptUrl(@Param('id') id: string, @Req() request: Request) {
+    return this.jobsService.getTranscriptDownloadUrl(request.session.userId!, id)
   }
 
   @Post('upload-url')

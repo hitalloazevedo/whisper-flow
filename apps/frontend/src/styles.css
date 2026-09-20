@@ -654,6 +654,25 @@ footer {
   cursor: not-allowed;
   opacity: 0.4;
 }
+.transcript-modal {
+  width: min(100%, 640px);
+}
+.transcript-text {
+  max-height: 360px;
+  margin: 16px 0 0;
+  padding: 14px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid #d5cdbf;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.42);
+  color: #30332e;
+  font:
+    12px 'DM Mono',
+    monospace;
+  line-height: 1.6;
+}
 @keyframes backdrop-in {
   from {
     opacity: 0;

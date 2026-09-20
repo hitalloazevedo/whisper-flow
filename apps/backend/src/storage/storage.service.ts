@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   NotFound,
   PutObjectCommand,
@@ -11,6 +12,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 const PRESIGNED_UPLOAD_URL_TTL_SECONDS = 15 * 60
+const PRESIGNED_DOWNLOAD_URL_TTL_SECONDS = 5 * 60
 
 @Injectable()
 export class StorageService {
@@ -37,6 +39,15 @@ export class StorageService {
       { expiresIn: PRESIGNED_UPLOAD_URL_TTL_SECONDS },
     )
     return { url, expiresInSeconds: PRESIGNED_UPLOAD_URL_TTL_SECONDS }
+  }
+
+  async createPresignedDownloadUrl(key: string) {
+    const url = await getSignedUrl(
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+      { expiresIn: PRESIGNED_DOWNLOAD_URL_TTL_SECONDS },
+    )
+    return { url, expiresInSeconds: PRESIGNED_DOWNLOAD_URL_TTL_SECONDS }
   }
 
   async getUploadedObjectSize(key: string) {

@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Plus, ShieldCheck, UploadCloud } from 'lucide-react'
 import { formatUploadLimit } from '../features/upload/uploadLimits'
 import type { Job, UploadLimits } from '../types'
 import { JobList } from './JobList'
+import { TranscriptModal } from './TranscriptModal'
 import { UploadModal } from './UploadModal'
 
 type DashboardProps = {
@@ -27,6 +29,8 @@ export function Dashboard({
   uploadError = null,
   jobsError = null,
 }: DashboardProps) {
+  const [transcriptJob, setTranscriptJob] = useState<Job | null>(null)
+
   return (
     <>
       <section className="hero-section">
@@ -105,7 +109,7 @@ export function Dashboard({
             {jobsError}
           </p>
         )}
-        <JobList jobs={jobs} />
+        <JobList jobs={jobs} onViewTranscript={setTranscriptJob} />
       </section>
       <footer>
         <span>Whisper Flow</span>
@@ -119,6 +123,9 @@ export function Dashboard({
           isUploading={isUploading}
           error={uploadError}
         />
+      )}
+      {transcriptJob && (
+        <TranscriptModal job={transcriptJob} onClose={() => setTranscriptJob(null)} />
       )}
     </>
   )

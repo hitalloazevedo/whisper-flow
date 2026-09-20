@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common'
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   NotFound,
   PutObjectCommand,
@@ -67,6 +68,27 @@ describe('StorageService', () => {
         ContentType: 'audio/mpeg',
       })
       expect(options).toEqual({ expiresIn: 15 * 60 })
+    })
+  })
+
+  describe('createPresignedDownloadUrl', () => {
+    it('signs a GetObjectCommand for the given key', async () => {
+      vi.mocked(getSignedUrl).mockResolvedValue('https://minio.local/download-signed')
+      const service = createService()
+
+      const result = await service.createPresignedDownloadUrl('transcripts/u1/job-1.txt')
+
+      expect(result).toEqual({
+        url: 'https://minio.local/download-signed',
+        expiresInSeconds: 5 * 60,
+      })
+      const [, command, options] = vi.mocked(getSignedUrl).mock.calls[0]
+      expect(command).toBeInstanceOf(GetObjectCommand)
+      expect(command.input).toMatchObject({
+        Bucket: 'whisper-flow-audio',
+        Key: 'transcripts/u1/job-1.txt',
+      })
+      expect(options).toEqual({ expiresIn: 5 * 60 })
     })
   })
 

@@ -1,17 +1,23 @@
 import { describe, expect, it, vi } from 'vitest'
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
 import { JobsService } from './jobs.service'
+import { JobStatus } from './job.entity'
 
 function createService() {
   const jobs = {
     create: vi.fn((value) => value),
     save: vi.fn(async (value) => ({ id: 'job-1', ...value })),
     find: vi.fn(),
+    findOne: vi.fn(),
   }
   const storageService = {
     createPresignedUploadUrl: vi.fn(async () => ({
       url: 'https://minio.local/signed',
       expiresInSeconds: 900,
+    })),
+    createPresignedDownloadUrl: vi.fn(async () => ({
+      url: 'https://minio.local/download-signed',
+      expiresInSeconds: 300,
     })),
     getUploadedObjectSize: vi.fn(),
     commitUpload: vi.fn(),
@@ -117,6 +123,76 @@ describe('JobsService', () => {
         order: { createdAt: 'DESC' },
       })
       expect(result).toEqual([{ id: 'job-1' }])
+    })
+  })
+
+  describe('getTranscriptDownloadUrl', () => {
+    it('returns a presigned download URL for a completed job owned by the user', async () => {
+      const { service, jobs, storageService } = createService()
+      jobs.findOne.mockResolvedValue({
+        id: 'job-1',
+        createdBy: 'user-1',
+        status: JobStatus.Completed,
+        outputPath: 'transcripts/user-1/job-1.txt',
+      })
+
+      const result = await service.getTranscriptDownloadUrl('user-1', 'job-1')
+
+      expect(storageService.createPresignedDownloadUrl).toHaveBeenCalledWith(
+        'transcripts/user-1/job-1.txt',
+      )
+      expect(result).toEqual({ url: 'https://minio.local/download-signed', expiresInSeconds: 300 })
+    })
+
+    it('throws NotFoundException when the job does not exist', async () => {
+      const { service, jobs } = createService()
+      jobs.findOne.mockResolvedValue(null)
+
+      await expect(service.getTranscriptDownloadUrl('user-1', 'job-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      )
+    })
+
+    it('throws NotFoundException when the job belongs to another user', async () => {
+      const { service, jobs } = createService()
+      jobs.findOne.mockResolvedValue({
+        id: 'job-1',
+        createdBy: 'user-2',
+        status: JobStatus.Completed,
+        outputPath: 'transcripts/user-2/job-1.txt',
+      })
+
+      await expect(service.getTranscriptDownloadUrl('user-1', 'job-1')).rejects.toBeInstanceOf(
+        NotFoundException,
+      )
+    })
+
+    it('throws BadRequestException when the job is not completed', async () => {
+      const { service, jobs } = createService()
+      jobs.findOne.mockResolvedValue({
+        id: 'job-1',
+        createdBy: 'user-1',
+        status: JobStatus.Processing,
+        outputPath: null,
+      })
+
+      await expect(service.getTranscriptDownloadUrl('user-1', 'job-1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      )
+    })
+
+    it('throws BadRequestException when outputPath is missing', async () => {
+      const { service, jobs } = createService()
+      jobs.findOne.mockResolvedValue({
+        id: 'job-1',
+        createdBy: 'user-1',
+        status: JobStatus.Completed,
+        outputPath: null,
+      })
+
+      await expect(service.getTranscriptDownloadUrl('user-1', 'job-1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      )
     })
   })
 })

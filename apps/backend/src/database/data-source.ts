@@ -9,6 +9,7 @@ import { CreateJobsTable1720000000000 } from './migrations/1720000000000-CreateJ
 import { AddOriginalFilenameToJobs1730000000000 } from './migrations/1730000000000-AddOriginalFilenameToJobs'
 import { AddJobsNotifyTrigger1740000000000 } from './migrations/1740000000000-AddJobsNotifyTrigger'
 import { AddTraceIdToJobs1750000000000 } from './migrations/1750000000000-AddTraceIdToJobs'
+import { AddJobsNotifyUpdateTrigger1760000000000 } from './migrations/1760000000000-AddJobsNotifyUpdateTrigger'
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -20,6 +21,7 @@ export const AppDataSource = new DataSource({
     AddOriginalFilenameToJobs1730000000000,
     AddJobsNotifyTrigger1740000000000,
     AddTraceIdToJobs1750000000000,
+    AddJobsNotifyUpdateTrigger1760000000000,
   ],
   synchronize: false,
 })

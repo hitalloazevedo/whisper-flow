@@ -5,6 +5,7 @@ import { AuthPage } from './components/AuthPage'
 import { Dashboard } from './components/Dashboard'
 import { apiUrl } from './config/api'
 import { initialJobs } from './data/demoJobs'
+import { useJobEvents } from './features/jobs/useJobEvents'
 import { getUploadLimits, mockedUploadLimits } from './features/upload/uploadLimits'
 import {
   getPresignedUploadUrl,
@@ -96,6 +97,20 @@ function App() {
 
     return () => controller.abort()
   }, [isSignedIn])
+
+  useJobEvents(
+    isSignedIn,
+    (event) => {
+      setJobs((currentJobs) =>
+        currentJobs.map((job) => (job.id === event.id ? { ...job, status: event.status } : job)),
+      )
+    },
+    () => {
+      fetchJobs()
+        .then(setJobs)
+        .catch(() => {})
+    },
+  )
 
   async function addJob(file: File) {
     setIsUploading(true)
